@@ -32,12 +32,15 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginLeft">5dip</item>
         <item name="android:layout_marginRight">5dip</item>
+        <item name="android:paddingLeft">10dip</item>
+        <item name="android:paddingRight">10dip</item>
         <item name="android:paddingTop">5dip</item>
         <item name="android:paddingBottom">5dip</item>
         <item name="android:background">@drawable/select_selector</item>
         <item name="android:button">@null</item>
         <item name="android:gravity">center</item>
         <item name="android:textSize">13sp</item>
+        <item name="android:letterSpacing">0.1</item>
         <item name="android:textColor">@drawable/txt_select_selector</item>
     </style>
 
@@ -70,5 +73,15 @@
             <enum name="number" value="1" />
             <enum name="textPassword" value="2" />
         </attr>
+    </declare-styleable>
+
+    <style name="dialog_menu" parent="@android:style/Theme.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <declare-styleable name="StepBar">
+        <attr name="current_step" format="string" />
+        <attr name="help_tip" format="string" />
     </declare-styleable>
 </resources>

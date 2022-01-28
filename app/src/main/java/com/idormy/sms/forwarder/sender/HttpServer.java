@@ -8,6 +8,7 @@ import android.widget.Toast;
 import com.idormy.sms.forwarder.R;
 import com.idormy.sms.forwarder.model.vo.SmsHubVo;
 import com.idormy.sms.forwarder.receiver.BaseServlet;
+import com.idormy.sms.forwarder.utils.Define;
 import com.idormy.sms.forwarder.utils.NetUtil;
 import com.idormy.sms.forwarder.utils.SettingUtil;
 import com.idormy.sms.forwarder.utils.SmsHubActionHandler;
@@ -18,7 +19,6 @@ import org.eclipse.jetty.server.Server;
 public class HttpServer {
     private static Boolean hasInit = false;
     private static Server jettyServer;
-    private static final int port = 5000;
     @SuppressLint("StaticFieldLeak")
     private static Context context;
     private static long ts = 0L;
@@ -33,7 +33,7 @@ public class HttpServer {
             hasInit = true;
             HttpServer.context = context;
             SmsHubActionHandler.init(context);
-            jettyServer = new Server(port);
+            jettyServer = new Server(Define.HTTP_SERVER_PORT);
             BaseServlet.addServlet(jettyServer, context);
         }
     }
@@ -50,13 +50,15 @@ public class HttpServer {
     }
 
     public synchronized static boolean update() {
-        if (!asRunning() && NetUtil.NETWORK_WIFI != NetUtil.getNetWorkStatus()) {
+        //非WiFi网络下不可启用
+        if (NetUtil.NETWORK_WIFI != NetUtil.getNetWorkStatus()) {
             Toast.makeText(context, R.string.no_wifi_network, Toast.LENGTH_SHORT).show();
+            if (asRunning()) stop();
             return false;
         }
         long l = System.currentTimeMillis();
         if (l - ts < 3000 && asRunning()) {
-            Toast.makeText(context, "点击启动后请等待3秒", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, R.string.tips_wait_3_seconds, Toast.LENGTH_SHORT).show();
             return false;
         }
         if (asRunning().equals(SettingUtil.getSwitchEnableHttpServer())) {
@@ -67,12 +69,11 @@ public class HttpServer {
             start();
             ts = System.currentTimeMillis();
             Toast.makeText(context, R.string.server_has_started, Toast.LENGTH_SHORT).show();
-            return true;
         } else {
             stop();
             Toast.makeText(context, R.string.server_has_stopped, Toast.LENGTH_SHORT).show();
-            return true;
         }
+        return true;
     }
 
     /**
@@ -101,13 +102,12 @@ public class HttpServer {
         //}).start();
     }
 
-
     private static void stop() {
         if (Boolean.FALSE.equals(asStopp())) {
             try {
                 if (jettyServer != null) {
                     jettyServer.stop();
-                    //                    jettyServer = new Server(port);
+                    //jettyServer = new Server(port);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

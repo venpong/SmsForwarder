@@ -1,5 +1,6 @@
 package com.idormy.sms.forwarder;
 
+import static com.idormy.sms.forwarder.model.SenderModel.STATUS_OFF;
 import static com.idormy.sms.forwarder.model.SenderModel.STATUS_ON;
 import static com.idormy.sms.forwarder.model.SenderModel.TYPE_BARK;
 import static com.idormy.sms.forwarder.model.SenderModel.TYPE_DINGDING;
@@ -15,24 +16,29 @@ import static com.idormy.sms.forwarder.model.SenderModel.TYPE_TELEGRAM;
 import static com.idormy.sms.forwarder.model.SenderModel.TYPE_WEB_NOTIFY;
 
 import android.annotation.SuppressLint;
+import android.app.Dialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.GridView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RadioGroup;
+import android.widget.SimpleAdapter;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.alibaba.fastjson.JSON;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.idormy.sms.forwarder.adapter.SenderAdapter;
 import com.idormy.sms.forwarder.model.SenderModel;
 import com.idormy.sms.forwarder.model.vo.BarkSettingVo;
@@ -45,6 +51,7 @@ import com.idormy.sms.forwarder.model.vo.QYWXAppSettingVo;
 import com.idormy.sms.forwarder.model.vo.QYWXGroupRobotSettingVo;
 import com.idormy.sms.forwarder.model.vo.ServerChanSettingVo;
 import com.idormy.sms.forwarder.model.vo.SmsSettingVo;
+import com.idormy.sms.forwarder.model.vo.SmsVo;
 import com.idormy.sms.forwarder.model.vo.TelegramSettingVo;
 import com.idormy.sms.forwarder.model.vo.WebNotifySettingVo;
 import com.idormy.sms.forwarder.sender.SenderBarkMsg;
@@ -60,13 +67,16 @@ import com.idormy.sms.forwarder.sender.SenderSmsMsg;
 import com.idormy.sms.forwarder.sender.SenderTelegramMsg;
 import com.idormy.sms.forwarder.sender.SenderUtil;
 import com.idormy.sms.forwarder.sender.SenderWebNotifyMsg;
+import com.idormy.sms.forwarder.utils.CommonUtil;
+import com.idormy.sms.forwarder.utils.LogUtil;
+import com.idormy.sms.forwarder.utils.RuleUtil;
 import com.idormy.sms.forwarder.view.ClearEditText;
-import com.umeng.analytics.MobclickAgent;
+import com.idormy.sms.forwarder.view.StepBar;
 
 import java.net.Proxy;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 @SuppressWarnings("deprecation")
@@ -93,17 +103,16 @@ public class SenderActivity extends AppCompatActivity {
         Log.d(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sender);
-        SenderUtil.init(SenderActivity.this);
+
+        LogUtil.init(this);
+        RuleUtil.init(this);
+        SenderUtil.init(this);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         Log.d(TAG, "onStart");
-
-        //是否关闭页面提示
-        TextView help_tip = findViewById(R.id.help_tip);
-        help_tip.setVisibility(MyApplication.showHelpTip ? View.VISIBLE : View.GONE);
 
         // 先拿到数据并放在适配器上
         initSenders(); //初始化数据
@@ -236,6 +245,89 @@ public class SenderActivity extends AppCompatActivity {
             builder.create().show();
             return true;
         });
+
+
+        //计算浮动按钮位置
+        FloatingActionButton btnFloat = findViewById(R.id.btnAddSender);
+        CommonUtil.calcMarginBottom(this, btnFloat, listView, null);
+
+        //添加发送通道
+        btnFloat.setOnClickListener(v -> {
+
+            @SuppressLint("InflateParams") View dialog_menu = LayoutInflater.from(SenderActivity.this).inflate(R.layout.alert_dialog_menu, null);
+            // 设置style 控制默认dialog带来的边距问题
+            final Dialog dialog = new Dialog(this, R.style.dialog_menu);
+            dialog.setContentView(dialog_menu);
+            dialog.show();
+
+            GridView gridview = dialog.findViewById(R.id.MemuGridView);
+            final List<HashMap<String, Object>> item = getMenuData();
+            SimpleAdapter simpleAdapter = new SimpleAdapter(this, item, R.layout.item_menu, new String[]{"ItemImageView", "ItemTextView"}, new int[]{R.id.ItemImageView, R.id.ItemTextView});
+            gridview.setAdapter(simpleAdapter);
+
+            // 添加点击事件
+            gridview.setOnItemClickListener((arg0, arg1, position, arg3) -> {
+                dialog.dismiss();
+
+                switch (position) {
+                    case TYPE_DINGDING:
+                        setDingDing(null, false);
+                        break;
+                    case TYPE_EMAIL:
+                        setEmail(null, false);
+                        break;
+                    case TYPE_BARK:
+                        setBark(null, false);
+                        break;
+                    case TYPE_WEB_NOTIFY:
+                        setWebNotify(null, false);
+                        break;
+                    case TYPE_QYWX_GROUP_ROBOT:
+                        setQYWXGroupRobot(null, false);
+                        break;
+                    case TYPE_QYWX_APP:
+                        setQYWXApp(null, false);
+                        break;
+                    case TYPE_SERVER_CHAN:
+                        setServerChan(null, false);
+                        break;
+                    case TYPE_TELEGRAM:
+                        setTelegram(null, false);
+                        break;
+                    case TYPE_SMS:
+                        setSms(null, false);
+                        break;
+                    case TYPE_FEISHU:
+                        setFeiShu(null, false);
+                        break;
+                    case TYPE_PUSHPLUS:
+                        setPushPlus(null, false);
+                        break;
+                    case TYPE_GOTIFY:
+                        setGotify(null, false);
+                        break;
+                    default:
+                        Toast.makeText(SenderActivity.this, R.string.not_supported, Toast.LENGTH_LONG).show();
+                        break;
+                }
+            });
+        });
+
+        //步骤完成状态校验
+        StepBar stepBar = findViewById(R.id.stepBar);
+        stepBar.setHighlight();
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "onDestroy");
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onPause() {
+        overridePendingTransition(0, 0);
+        super.onPause();
     }
 
     // 初始化数据
@@ -243,62 +335,53 @@ public class SenderActivity extends AppCompatActivity {
         senderModels = SenderUtil.getSender(null, null);
     }
 
-    public void addSender(View view) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(SenderActivity.this);
-        builder.setTitle(R.string.add_sender_title);
-        //添加列表
-        builder.setItems(R.array.add_sender_menu, (dialogInterface, which) -> {
-            switch (which) {
-                case TYPE_DINGDING:
-                    setDingDing(null, false);
-                    break;
-                case TYPE_EMAIL:
-                    setEmail(null, false);
-                    break;
-                case TYPE_BARK:
-                    setBark(null, false);
-                    break;
-                case TYPE_WEB_NOTIFY:
-                    setWebNotify(null, false);
-                    break;
-                case TYPE_QYWX_GROUP_ROBOT:
-                    setQYWXGroupRobot(null, false);
-                    break;
-                case TYPE_QYWX_APP:
-                    setQYWXApp(null, false);
-                    break;
-                case TYPE_SERVER_CHAN:
-                    setServerChan(null, false);
-                    break;
-                case TYPE_TELEGRAM:
-                    setTelegram(null, false);
-                    break;
-                case TYPE_SMS:
-                    setSms(null, false);
-                    break;
-                case TYPE_FEISHU:
-                    setFeiShu(null, false);
-                    break;
-                case TYPE_PUSHPLUS:
-                    setPushPlus(null, false);
-                    break;
-                case TYPE_GOTIFY:
-                    setGotify(null, false);
-                    break;
-                default:
-                    Toast.makeText(SenderActivity.this, R.string.not_supported, Toast.LENGTH_LONG).show();
-                    break;
-            }
-        });
-        builder.show();
-        Log.d(TAG, "setDingDing show" + senderModels.size());
+    // 获取发送通道菜单
+    private List<HashMap<String, Object>> getMenuData() {
+        //定义图标数组
+        int[] imageRes = {
+                R.mipmap.dingding,
+                R.mipmap.email,
+                R.mipmap.bark,
+                R.mipmap.webhook,
+                R.mipmap.qywx,
+                R.mipmap.qywxapp,
+                R.mipmap.serverchan,
+                R.mipmap.telegram,
+                R.mipmap.sms,
+                R.mipmap.feishu,
+                R.mipmap.pushplus,
+                R.mipmap.gotify,
+        };
+        //定义标题数组
+        String[] itemName = {
+                getString(R.string.dingding),
+                getString(R.string.email),
+                getString(R.string.bark),
+                getString(R.string.webhook),
+                getString(R.string.qywx),
+                getString(R.string.qywxapp),
+                getString(R.string.serverchan),
+                getString(R.string.telegram),
+                getString(R.string.sms_menu),
+                getString(R.string.feishu),
+                getString(R.string.pushplus),
+                getString(R.string.gotify),
+        };
+        List<HashMap<String, Object>> data = new ArrayList<>();
+        int length = itemName.length;
+        for (int i = 0; i < length; i++) {
+            HashMap<String, Object> map = new HashMap<>();
+            map.put("ItemImageView", imageRes[i]);
+            map.put("ItemTextView", itemName[i]);
+            data.add(map);
+        }
+        return data;
     }
 
     //钉钉机器人
-    @SuppressLint("SimpleDateFormat")
+    @SuppressLint({"SimpleDateFormat", "SetTextI18n"})
     private void setDingDing(final SenderModel senderModel, final boolean isClone) {
         DingDingSettingVo dingDingSettingVo = null;
-        //try phrase json setting
         if (senderModel != null) {
             String jsonSettingStr = senderModel.getJsonSetting();
             if (jsonSettingStr != null) {
@@ -309,20 +392,37 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_dingding, null);
 
         final EditText editTextDingdingName = view1.findViewById(R.id.editTextDingdingName);
-        if (senderModel != null)
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchDingdingEnable = view1.findViewById(R.id.switchDingdingEnable);
+        if (senderModel != null) {
             editTextDingdingName.setText(senderModel.getName());
+            switchDingdingEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final ClearEditText editTextDingdingToken = view1.findViewById(R.id.editTextDingdingToken);
-        if (dingDingSettingVo != null)
-            editTextDingdingToken.setText(dingDingSettingVo.getToken());
         final ClearEditText editTextDingdingSecret = view1.findViewById(R.id.editTextDingdingSecret);
-        if (dingDingSettingVo != null)
-            editTextDingdingSecret.setText(dingDingSettingVo.getSecret());
         final EditText editTextDingdingAtMobiles = view1.findViewById(R.id.editTextDingdingAtMobiles);
-        if (dingDingSettingVo != null && dingDingSettingVo.getAtMobiles() != null)
-            editTextDingdingAtMobiles.setText(dingDingSettingVo.getAtMobiles());
         @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchDingdingAtAll = view1.findViewById(R.id.switchDingdingAtAll);
-        if (dingDingSettingVo != null && dingDingSettingVo.getAtAll() != null)
-            switchDingdingAtAll.setChecked(dingDingSettingVo.getAtAll());
+        final LinearLayout linearLayoutDingdingAtMobiles = view1.findViewById(R.id.linearLayoutDingdingAtMobiles);
+        if (dingDingSettingVo != null) {
+            editTextDingdingToken.setText(dingDingSettingVo.getToken());
+            editTextDingdingSecret.setText(dingDingSettingVo.getSecret());
+            editTextDingdingAtMobiles.setText(dingDingSettingVo.getAtMobiles());
+            if (dingDingSettingVo.getAtAll() != null) {
+                switchDingdingAtAll.setChecked(dingDingSettingVo.getAtAll());
+                linearLayoutDingdingAtMobiles.setVisibility(dingDingSettingVo.getAtAll() ? View.GONE : View.VISIBLE);
+            }
+        }
+
+        switchDingdingAtAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                linearLayoutDingdingAtMobiles.setVisibility(View.GONE);
+                editTextDingdingAtMobiles.setText("@all");
+            } else {
+                linearLayoutDingdingAtMobiles.setVisibility(View.VISIBLE);
+                editTextDingdingAtMobiles.setText("");
+            }
+            Log.d(TAG, "onCheckedChanged:" + isChecked);
+        });
 
         Button buttonDingdingOk = view1.findViewById(R.id.buttonDingdingOk);
         Button buttonDingdingDel = view1.findViewById(R.id.buttonDingdingDel);
@@ -334,41 +434,44 @@ public class SenderActivity extends AppCompatActivity {
                 .create();
         final AlertDialog show = alertDialog71.show();
         buttonDingdingOk.setOnClickListener(view -> {
+            String senderName = editTextDingdingName.getText().toString().trim();
+            int senderStatus = switchDingdingEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            String token = editTextDingdingToken.getText().trim();
+            String secret = editTextDingdingSecret.getText().trim();
+            String atMobiles = editTextDingdingAtMobiles.getText().toString().trim();
+            Boolean atAll = switchDingdingAtAll.isChecked();
 
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (CommonUtil.checkUrl(token, true)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_token, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            DingDingSettingVo dingDingSettingVoNew = new DingDingSettingVo(token, secret, atMobiles, atAll);
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextDingdingName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_DINGDING);
-                newSenderModel.setStatus(STATUS_ON);
-                DingDingSettingVo dingDingSettingVoNew = new DingDingSettingVo(
-                        editTextDingdingToken.getText().toString().trim(),
-                        editTextDingdingSecret.getText().toString().trim(),
-                        editTextDingdingAtMobiles.getText().toString().trim(),
-                        switchDingdingAtAll.isChecked());
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(dingDingSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextDingdingName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_DINGDING);
-                senderModel.setStatus(STATUS_ON);
-                DingDingSettingVo dingDingSettingVoNew = new DingDingSettingVo(
-                        editTextDingdingToken.getText().toString().trim(),
-                        editTextDingdingSecret.getText().toString().trim(),
-                        editTextDingdingAtMobiles.getText().toString().trim(),
-                        switchDingdingAtAll.isChecked());
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(dingDingSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
-
             show.dismiss();
-
-
         });
+
         buttonDingdingDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -377,20 +480,23 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonDingdingTest.setOnClickListener(view -> {
-            String token = editTextDingdingToken.getText().toString().trim();
-            String secret = editTextDingdingSecret.getText().toString().trim();
+            String token = editTextDingdingToken.getText().trim();
+            if (CommonUtil.checkUrl(token, true)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_token, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String secret = editTextDingdingSecret.getText().trim();
             String atMobiles = editTextDingdingAtMobiles.getText().toString().trim();
             Boolean atAll = switchDingdingAtAll.isChecked();
-            if (!token.isEmpty()) {
-                try {
-                    SenderDingdingMsg.sendMsg(0, handler, token, secret, atMobiles, atAll, R.string.test_content + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
-                Toast.makeText(SenderActivity.this, R.string.invalid_token, Toast.LENGTH_LONG).show();
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderDingdingMsg.sendMsg(0, handler, null, token, secret, atMobiles, atAll, smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
             }
         });
     }
@@ -411,7 +517,11 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_email, null);
 
         final EditText editTextEmailName = view1.findViewById(R.id.editTextEmailName);
-        if (senderModel != null) editTextEmailName.setText(senderModel.getName());
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchEmailEnable = view1.findViewById(R.id.switchEmailEnable);
+        if (senderModel != null) {
+            editTextEmailName.setText(senderModel.getName());
+            switchEmailEnable.setChecked(senderModel.getStatusChecked());
+        }
 
         final EditText editTextEmailHost = view1.findViewById(R.id.editTextEmailHost);
         final EditText editTextEmailPort = view1.findViewById(R.id.editTextEmailPort);
@@ -445,12 +555,19 @@ public class SenderActivity extends AppCompatActivity {
         final AlertDialog show = alertDialog71.show();
 
         buttonEmailOk.setOnClickListener(view -> {
+            String senderName = editTextEmailName.getText().toString().trim();
+            int senderStatus = switchEmailEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
             String protocol = radioGroupEmailProtocol.getCheckedRadioButtonId() == R.id.radioEmailProtocolSmtp ? "SMTP" : "IMAP";
             String host = editTextEmailHost.getText().toString().trim();
             String port = editTextEmailPort.getText().toString().trim();
             boolean ssl = switchEmailSSl.isChecked();
             String fromEmail = editTextEmailFromAdd.getText().toString().trim();
-            String pwd = editTextEmailPsw.getText().toString().trim();
+            String pwd = editTextEmailPsw.getText().trim();
             String toEmail = editTextEmailToAdd.getText().toString().trim();
 
             String title = editTextEmailTitle.getText().toString().trim();
@@ -464,28 +581,27 @@ public class SenderActivity extends AppCompatActivity {
             }
 
             EmailSettingVo emailSettingVoNew = new EmailSettingVo(protocol, host, port, ssl, fromEmail, nickname, pwd, toEmail, title);
-
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextEmailName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_EMAIL);
-                newSenderModel.setStatus(STATUS_ON);
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(emailSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextEmailName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_EMAIL);
-                senderModel.setStatus(STATUS_ON);
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(emailSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
             show.dismiss();
         });
+
         buttonEmailDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -494,13 +610,14 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonEmailTest.setOnClickListener(view -> {
             String protocol = radioGroupEmailProtocol.getCheckedRadioButtonId() == R.id.radioEmailProtocolSmtp ? "SMTP" : "IMAP";
             String host = editTextEmailHost.getText().toString().trim();
             String port = editTextEmailPort.getText().toString().trim();
             boolean ssl = switchEmailSSl.isChecked();
             String fromEmail = editTextEmailFromAdd.getText().toString().trim();
-            String pwd = editTextEmailPsw.getText().toString().trim();
+            String pwd = editTextEmailPsw.getText().trim();
             String toEmail = editTextEmailToAdd.getText().toString().trim();
 
             String title = editTextEmailTitle.getText().toString().trim();
@@ -509,15 +626,17 @@ public class SenderActivity extends AppCompatActivity {
             String nickname = editTextEmailNickname.getText().toString().trim();
             if (nickname.isEmpty()) nickname = "SmsForwarder";
 
-            if (!host.isEmpty() && !port.isEmpty() && !fromEmail.isEmpty() && !pwd.isEmpty() && !toEmail.isEmpty()) {
-                try {
-                    SenderMailMsg.sendEmail(0, handler, protocol, host, port, ssl, fromEmail, nickname, pwd, toEmail, title, R.string.test_content + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
+            if (host.isEmpty() || port.isEmpty() || fromEmail.isEmpty() || pwd.isEmpty() || toEmail.isEmpty()) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_email, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderMailMsg.sendEmail(0, handler, protocol, host, port, ssl, fromEmail, nickname, pwd, toEmail, smsVo.getTitleForSend(title), smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
             }
         });
 
@@ -526,28 +645,28 @@ public class SenderActivity extends AppCompatActivity {
         buttonInsertSender.setOnClickListener(view -> {
             editTextEmailTitle.setFocusable(true);
             editTextEmailTitle.requestFocus();
-            editTextEmailTitle.append("{{来源号码}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextEmailTitle, getString(R.string.tag_from));
         });
 
         Button buttonInsertExtra = view1.findViewById(R.id.bt_insert_extra);
         buttonInsertExtra.setOnClickListener(view -> {
             editTextEmailTitle.setFocusable(true);
             editTextEmailTitle.requestFocus();
-            editTextEmailTitle.append("{{卡槽信息}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextEmailTitle, getString(R.string.tag_card_slot));
         });
 
         Button buttonInsertTime = view1.findViewById(R.id.bt_insert_time);
         buttonInsertTime.setOnClickListener(view -> {
             editTextEmailTitle.setFocusable(true);
             editTextEmailTitle.requestFocus();
-            editTextEmailTitle.append("{{接收时间}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextEmailTitle, getString(R.string.tag_receive_time));
         });
 
         Button buttonInsertDeviceName = view1.findViewById(R.id.bt_insert_device_name);
         buttonInsertDeviceName.setOnClickListener(view -> {
             editTextEmailTitle.setFocusable(true);
             editTextEmailTitle.requestFocus();
-            editTextEmailTitle.append("{{设备名称}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextEmailTitle, getString(R.string.tag_device_name));
         });
 
     }
@@ -567,11 +686,28 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_bark, null);
 
         final EditText editTextBarkName = view1.findViewById(R.id.editTextBarkName);
-        if (senderModel != null) editTextBarkName.setText(senderModel.getName());
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchBarkEnable = view1.findViewById(R.id.switchBarkEnable);
+        if (senderModel != null) {
+            editTextBarkName.setText(senderModel.getName());
+            switchBarkEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final ClearEditText editTextBarkServer = view1.findViewById(R.id.editTextBarkServer);
-        if (barkSettingVo != null) editTextBarkServer.setText(barkSettingVo.getServer());
+        final EditText editTextBarkTitle = view1.findViewById(R.id.editTextBarkTitle);
         final EditText editTextBarkIcon = view1.findViewById(R.id.editTextBarkIcon);
-        if (barkSettingVo != null) editTextBarkIcon.setText(barkSettingVo.getIcon());
+        final EditText editTextBarkSound = view1.findViewById(R.id.editTextBarkSound);
+        final EditText editTextBarkBadge = view1.findViewById(R.id.editTextBarkBadge);
+        final EditText editTextBarkUrl = view1.findViewById(R.id.editTextBarkUrl);
+        final RadioGroup radioGroupBarkLevel = view1.findViewById(R.id.radioGroupBarkLevel);
+        if (barkSettingVo != null) {
+            editTextBarkServer.setText(barkSettingVo.getServer());
+            editTextBarkTitle.setText(barkSettingVo.getTitle());
+            editTextBarkIcon.setText(barkSettingVo.getIcon());
+            editTextBarkSound.setText(barkSettingVo.getSound());
+            editTextBarkBadge.setText(barkSettingVo.getBadge());
+            editTextBarkUrl.setText(barkSettingVo.getUrl());
+            radioGroupBarkLevel.check(barkSettingVo.getLevelId());
+        }
 
         Button buttonBarkOk = view1.findViewById(R.id.buttonBarkOk);
         Button buttonBarkDel = view1.findViewById(R.id.buttonBarkDel);
@@ -584,37 +720,48 @@ public class SenderActivity extends AppCompatActivity {
         final AlertDialog show = alertDialog71.show();
 
         buttonBarkOk.setOnClickListener(view -> {
+            String senderName = editTextBarkName.getText().toString().trim();
+            int senderStatus = switchBarkEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
 
+            //推送地址
+            String barkServer = editTextBarkServer.getText().trim();
+            if (!CommonUtil.checkUrl(barkServer, false)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_bark_server, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String icon = editTextBarkIcon.getText().toString().trim(); //消息图标
+            String title = editTextBarkTitle.getText().toString().trim(); //标题模板
+            int levelId = radioGroupBarkLevel.getCheckedRadioButtonId(); //时效性
+            String sound = editTextBarkSound.getText().toString().trim(); //声音
+            String badge = editTextBarkBadge.getText().toString().trim(); //角标
+            String url = editTextBarkUrl.getText().toString().trim(); //链接
+            BarkSettingVo barkSettingVoNew = new BarkSettingVo(barkServer, icon, title, levelId, sound, badge, url);
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextBarkName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_BARK);
-                newSenderModel.setStatus(STATUS_ON);
-                BarkSettingVo barkSettingVoNew = new BarkSettingVo(
-                        editTextBarkServer.getText().toString().trim(),
-                        editTextBarkIcon.getText().toString().trim()
-                );
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(barkSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextBarkName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_BARK);
-                senderModel.setStatus(STATUS_ON);
-                BarkSettingVo barkSettingVoNew = new BarkSettingVo(
-                        editTextBarkServer.getText().toString().trim(),
-                        editTextBarkIcon.getText().toString().trim()
-                );
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(barkSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
             show.dismiss();
-
         });
+
         buttonBarkDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -623,12 +770,20 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonBarkTest.setOnClickListener(view -> {
-            String barkServer = editTextBarkServer.getText().toString().trim();
-            String barkIcon = editTextBarkIcon.getText().toString().trim();
-            if (!barkServer.isEmpty()) {
+            String barkServer = editTextBarkServer.getText().trim();
+            String icon = editTextBarkIcon.getText().toString().trim(); //消息图标
+            String title = editTextBarkTitle.getText().toString().trim(); //标题模板
+            int levelId = radioGroupBarkLevel.getCheckedRadioButtonId(); //时效性
+            String sound = editTextBarkSound.getText().toString().trim(); //声音
+            String badge = editTextBarkBadge.getText().toString().trim(); //角标
+            String url = editTextBarkUrl.getText().toString().trim(); //链接
+            BarkSettingVo barkSettingVoNew = new BarkSettingVo(barkServer, icon, title, levelId, sound, badge, url);
+            if (CommonUtil.checkUrl(barkServer, false)) {
                 try {
-                    SenderBarkMsg.sendMsg(0, handler, barkServer, barkIcon, getString(R.string.test_phone_num), getString(R.string.test_sms), getString(R.string.test_group_name));
+                    SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                    SenderBarkMsg.sendMsg(0, handler, null, barkSettingVoNew, smsVo.getTitleForSend(title), smsVo.getSmsVoForSend(), getString(R.string.test_group_name));
                 } catch (Exception e) {
                     Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
                     e.printStackTrace();
@@ -637,89 +792,36 @@ public class SenderActivity extends AppCompatActivity {
                 Toast.makeText(SenderActivity.this, R.string.invalid_bark_server, Toast.LENGTH_LONG).show();
             }
         });
-    }
 
-    //Server酱·Turbo版
-    private void setServerChan(final SenderModel senderModel, final boolean isClone) {
-        ServerChanSettingVo serverchanSettingVo = null;
-        //try phrase json setting
-        if (senderModel != null) {
-            String jsonSettingStr = senderModel.getJsonSetting();
-            if (jsonSettingStr != null) {
-                serverchanSettingVo = JSON.parseObject(jsonSettingStr, ServerChanSettingVo.class);
-            }
-        }
 
-        final AlertDialog.Builder alertDialog71 = new AlertDialog.Builder(SenderActivity.this);
-        View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_serverchan, null);
-
-        final EditText editTextServerChanName = view1.findViewById(R.id.editTextServerChanName);
-        if (senderModel != null) editTextServerChanName.setText(senderModel.getName());
-        final ClearEditText editTextServerChanSendKey = view1.findViewById(R.id.editTextServerChanSendKey);
-        if (serverchanSettingVo != null)
-            editTextServerChanSendKey.setText(serverchanSettingVo.getSendKey());
-
-        Button buttonServerChanOk = view1.findViewById(R.id.buttonServerChanOk);
-        Button buttonServerChanDel = view1.findViewById(R.id.buttonServerChanDel);
-        Button buttonServerChanTest = view1.findViewById(R.id.buttonServerChanTest);
-        alertDialog71
-                .setTitle(R.string.setserverchantitle)
-                .setIcon(R.mipmap.serverchan)
-                .setView(view1)
-                .create();
-        final AlertDialog show = alertDialog71.show();
-
-        buttonServerChanOk.setOnClickListener(view -> {
-
-            if (isClone || senderModel == null) {
-                SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextServerChanName.getText().toString().trim());
-                newSenderModel.setType(TYPE_SERVER_CHAN);
-                newSenderModel.setStatus(STATUS_ON);
-                ServerChanSettingVo serverChanSettingVoNew = new ServerChanSettingVo(
-                        editTextServerChanSendKey.getText().toString().trim()
-                );
-                newSenderModel.setJsonSetting(JSON.toJSONString(serverChanSettingVoNew));
-                SenderUtil.addSender(newSenderModel);
-                initSenders();
-                adapter.add(senderModels);
-            } else {
-                senderModel.setName(editTextServerChanName.getText().toString().trim());
-                senderModel.setType(TYPE_SERVER_CHAN);
-                senderModel.setStatus(STATUS_ON);
-                ServerChanSettingVo serverChanSettingVoNew = new ServerChanSettingVo(
-                        editTextServerChanSendKey.getText().toString().trim()
-                );
-                senderModel.setJsonSetting(JSON.toJSONString(serverChanSettingVoNew));
-                SenderUtil.updateSender(senderModel);
-                initSenders();
-                adapter.update(senderModels);
-            }
-
-            show.dismiss();
-
+        Button buttonInsertSender = view1.findViewById(R.id.bt_insert_sender);
+        buttonInsertSender.setOnClickListener(view -> {
+            editTextBarkTitle.setFocusable(true);
+            editTextBarkTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextBarkTitle, getString(R.string.tag_from));
         });
-        buttonServerChanDel.setOnClickListener(view -> {
-            if (senderModel != null) {
-                SenderUtil.delSender(senderModel.getId());
-                initSenders();
-                adapter.del(senderModels);
-            }
-            show.dismiss();
+
+        Button buttonInsertExtra = view1.findViewById(R.id.bt_insert_extra);
+        buttonInsertExtra.setOnClickListener(view -> {
+            editTextBarkTitle.setFocusable(true);
+            editTextBarkTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextBarkTitle, getString(R.string.tag_card_slot));
         });
-        buttonServerChanTest.setOnClickListener(view -> {
-            String serverChanServer = editTextServerChanSendKey.getText().toString().trim();
-            if (!serverChanServer.isEmpty()) {
-                try {
-                    SenderServerChanMsg.sendMsg(0, handler, serverChanServer, getString(R.string.test_phone_num), getString(R.string.test_sms));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
-                Toast.makeText(SenderActivity.this, R.string.invalid_sendkey, Toast.LENGTH_LONG).show();
-            }
+
+        Button buttonInsertTime = view1.findViewById(R.id.bt_insert_time);
+        buttonInsertTime.setOnClickListener(view -> {
+            editTextBarkTitle.setFocusable(true);
+            editTextBarkTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextBarkTitle, getString(R.string.tag_receive_time));
         });
+
+        Button buttonInsertDeviceName = view1.findViewById(R.id.bt_insert_device_name);
+        buttonInsertDeviceName.setOnClickListener(view -> {
+            editTextBarkTitle.setFocusable(true);
+            editTextBarkTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextBarkTitle, getString(R.string.tag_device_name));
+        });
+
     }
 
     //webhook
@@ -738,15 +840,22 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_webnotify, null);
 
         final EditText editTextWebNotifyName = view1.findViewById(R.id.editTextWebNotifyName);
-        if (senderModel != null) editTextWebNotifyName.setText(senderModel.getName());
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchWebNotifyEnable = view1.findViewById(R.id.switchWebNotifyEnable);
+        if (senderModel != null) {
+            editTextWebNotifyName.setText(senderModel.getName());
+            switchWebNotifyEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final EditText editTextWebNotifyWebServer = view1.findViewById(R.id.editTextWebNotifyWebServer);
-        if (webNotifySettingVo != null) editTextWebNotifyWebServer.setText(webNotifySettingVo.getWebServer());
         final EditText editTextWebNotifyWebParams = view1.findViewById(R.id.editTextWebNotifyWebParams);
-        if (webNotifySettingVo != null) editTextWebNotifyWebParams.setText(webNotifySettingVo.getWebParams());
         final ClearEditText editTextWebNotifySecret = view1.findViewById(R.id.editTextWebNotifySecret);
-        if (webNotifySettingVo != null) editTextWebNotifySecret.setText(webNotifySettingVo.getSecret());
         final RadioGroup radioGroupWebNotifyMethod = view1.findViewById(R.id.radioGroupWebNotifyMethod);
-        if (webNotifySettingVo != null) radioGroupWebNotifyMethod.check(webNotifySettingVo.getWebNotifyMethodCheckId());
+        if (webNotifySettingVo != null) {
+            editTextWebNotifyWebServer.setText(webNotifySettingVo.getWebServer());
+            editTextWebNotifyWebParams.setText(webNotifySettingVo.getWebParams());
+            editTextWebNotifySecret.setText(webNotifySettingVo.getSecret());
+            radioGroupWebNotifyMethod.check(webNotifySettingVo.getWebNotifyMethodCheckId());
+        }
 
         Button buttonWebNotifyOk = view1.findViewById(R.id.buttonWebNotifyOk);
         Button buttonWebNotifyDel = view1.findViewById(R.id.buttonWebNotifyDel);
@@ -759,23 +868,35 @@ public class SenderActivity extends AppCompatActivity {
         final AlertDialog show = alertDialog71.show();
 
         buttonWebNotifyOk.setOnClickListener(view -> {
-            WebNotifySettingVo webNotifySettingVoNew = new WebNotifySettingVo(
-                    editTextWebNotifyWebServer.getText().toString().trim(),
-                    editTextWebNotifySecret.getText().toString().trim(),
-                    (radioGroupWebNotifyMethod.getCheckedRadioButtonId() == R.id.radioWebNotifyMethodGet ? "GET" : "POST"),
-                    editTextWebNotifyWebParams.getText().toString().trim()
-            );
+            String senderName = editTextWebNotifyName.getText().toString().trim();
+            int senderStatus = switchWebNotifyEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String webServer = editTextWebNotifyWebServer.getText().toString().trim();
+            String secret = editTextWebNotifySecret.getText().trim();
+            String method = radioGroupWebNotifyMethod.getCheckedRadioButtonId() == R.id.radioWebNotifyMethodGet ? "GET" : "POST";
+            String webParams = editTextWebNotifyWebParams.getText().toString().trim();
+
+            if (!CommonUtil.checkUrl(webServer, false)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_webserver, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            WebNotifySettingVo webNotifySettingVoNew = new WebNotifySettingVo(webServer, secret, method, webParams);
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextWebNotifyName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_WEB_NOTIFY);
-                newSenderModel.setStatus(STATUS_ON);
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(webNotifySettingVoNew));
                 SenderUtil.addSender(newSenderModel);
             } else {
-                senderModel.setName(editTextWebNotifyName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_WEB_NOTIFY);
-                senderModel.setStatus(STATUS_ON);
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(webNotifySettingVoNew));
                 SenderUtil.updateSender(senderModel);
             }
@@ -783,6 +904,7 @@ public class SenderActivity extends AppCompatActivity {
             adapter.update(senderModels);
             show.dismiss();
         });
+
         buttonWebNotifyDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -791,20 +913,24 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonWebNotifyTest.setOnClickListener(view -> {
             String webServer = editTextWebNotifyWebServer.getText().toString().trim();
-            String webParams = editTextWebNotifyWebParams.getText().toString().trim();
-            String secret = editTextWebNotifySecret.getText().toString().trim();
+            String secret = editTextWebNotifySecret.getText().trim();
             String method = radioGroupWebNotifyMethod.getCheckedRadioButtonId() == R.id.radioWebNotifyMethodGet ? "GET" : "POST";
-            if (!webServer.isEmpty()) {
-                try {
-                    SenderWebNotifyMsg.sendMsg(0, handler, webServer, webParams, secret, method, "SmsForwarder Title", R.string.test_content + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
+            String webParams = editTextWebNotifyWebParams.getText().toString().trim();
+
+            if (!CommonUtil.checkUrl(webServer, false)) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_webserver, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderWebNotifyMsg.sendMsg(0, handler, null, webServer, webParams, secret, method, smsVo.getMobile(), smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
             }
         });
     }
@@ -825,10 +951,16 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_qywxgrouprobot, null);
 
         final EditText editTextQYWXGroupRobotName = view1.findViewById(R.id.editTextQYWXGroupRobotName);
-        if (senderModel != null) editTextQYWXGroupRobotName.setText(senderModel.getName());
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchQYWXGroupRobotEnable = view1.findViewById(R.id.switchQYWXGroupRobotEnable);
+        if (senderModel != null) {
+            editTextQYWXGroupRobotName.setText(senderModel.getName());
+            switchQYWXGroupRobotEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final ClearEditText editTextQYWXGroupRobotWebHook = view1.findViewById(R.id.editTextQYWXGroupRobotWebHook);
-        if (qywxGroupRobotSettingVo != null)
+        if (qywxGroupRobotSettingVo != null) {
             editTextQYWXGroupRobotWebHook.setText(qywxGroupRobotSettingVo.getWebHook());
+        }
 
         Button buttonQyWxGroupRobotOk = view1.findViewById(R.id.buttonQyWxGroupRobotOk);
         Button buttonQyWxGroupRobotDel = view1.findViewById(R.id.buttonQyWxGroupRobotDel);
@@ -841,35 +973,41 @@ public class SenderActivity extends AppCompatActivity {
         final AlertDialog show = alertDialog71.show();
 
         buttonQyWxGroupRobotOk.setOnClickListener(view -> {
+            String senderName = editTextQYWXGroupRobotName.getText().toString().trim();
+            int senderStatus = switchQYWXGroupRobotEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
 
+            String webHook = editTextQYWXGroupRobotWebHook.getText().trim();
+            if (!CommonUtil.checkUrl(webHook, false)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_webhook, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            QYWXGroupRobotSettingVo qywxGroupRobotSettingVoNew = new QYWXGroupRobotSettingVo(webHook);
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextQYWXGroupRobotName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_QYWX_GROUP_ROBOT);
-                newSenderModel.setStatus(STATUS_ON);
-                QYWXGroupRobotSettingVo qywxGroupRobotSettingVoNew = new QYWXGroupRobotSettingVo(
-                        editTextQYWXGroupRobotWebHook.getText().toString().trim()
-                );
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(qywxGroupRobotSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextQYWXGroupRobotName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_QYWX_GROUP_ROBOT);
-                senderModel.setStatus(STATUS_ON);
-                QYWXGroupRobotSettingVo qywxGroupRobotSettingVoNew = new QYWXGroupRobotSettingVo(
-                        editTextQYWXGroupRobotWebHook.getText().toString().trim()
-                );
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(qywxGroupRobotSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
             show.dismiss();
-
         });
+
         buttonQyWxGroupRobotDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -878,17 +1016,20 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonQyWxGroupRobotTest.setOnClickListener(view -> {
-            String webHook = editTextQYWXGroupRobotWebHook.getText().toString().trim();
-            if (!webHook.isEmpty()) {
-                try {
-                    SenderQyWxGroupRobotMsg.sendMsg(0, handler, webHook, "SmsForwarder Title", R.string.test_content + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
+            String webHook = editTextQYWXGroupRobotWebHook.getText().trim();
+            if (!CommonUtil.checkUrl(webHook, false)) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_webhook, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderQyWxGroupRobotMsg.sendMsg(0, handler, null, webHook, smsVo.getMobile(), smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
             }
         });
     }
@@ -908,8 +1049,12 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_qywxapp, null);
 
         final EditText editTextQYWXAppName = view1.findViewById(R.id.editTextQYWXAppName);
-        if (senderModel != null)
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchQYWXAppEnable = view1.findViewById(R.id.switchQYWXAppEnable);
+        if (senderModel != null) {
             editTextQYWXAppName.setText(senderModel.getName());
+            switchQYWXAppEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final EditText editTextQYWXAppCorpID = view1.findViewById(R.id.editTextQYWXAppCorpID);
         final EditText editTextQYWXAppAgentID = view1.findViewById(R.id.editTextQYWXAppAgentID);
         final ClearEditText editTextQYWXAppSecret = view1.findViewById(R.id.editTextQYWXAppSecret);
@@ -945,6 +1090,13 @@ public class SenderActivity extends AppCompatActivity {
                 .create();
         final AlertDialog show = alertDialog71.show();
         buttonQYWXAppOk.setOnClickListener(view -> {
+            String senderName = editTextQYWXAppName.getText().toString().trim();
+            int senderStatus = switchQYWXAppEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
             String toUser = editTextQYWXAppToUser.getText().toString().trim();
             if (toUser.isEmpty()) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_at_mobiles, Toast.LENGTH_LONG).show();
@@ -953,39 +1105,38 @@ public class SenderActivity extends AppCompatActivity {
                 return;
             }
 
+            QYWXAppSettingVo QYWXAppSettingVoNew = new QYWXAppSettingVo(
+                    editTextQYWXAppCorpID.getText().toString().trim(),
+                    editTextQYWXAppAgentID.getText().toString().trim(),
+                    editTextQYWXAppSecret.getText().trim(),
+                    editTextQYWXAppToUser.getText().toString().trim(),
+                    switchQYWXAppAtAll.isChecked());
+            if (!QYWXAppSettingVoNew.checkParms()) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_webcom_app_parm, Toast.LENGTH_LONG).show();
+                return;
+            }
+
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextQYWXAppName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_QYWX_APP);
-                newSenderModel.setStatus(STATUS_ON);
-                QYWXAppSettingVo QYWXAppSettingVoNew = new QYWXAppSettingVo(
-                        editTextQYWXAppCorpID.getText().toString().trim(),
-                        editTextQYWXAppAgentID.getText().toString().trim(),
-                        editTextQYWXAppSecret.getText().toString().trim(),
-                        editTextQYWXAppToUser.getText().toString().trim(),
-                        switchQYWXAppAtAll.isChecked());
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(QYWXAppSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextQYWXAppName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_QYWX_APP);
-                senderModel.setStatus(STATUS_ON);
-                QYWXAppSettingVo QYWXAppSettingVoNew = new QYWXAppSettingVo(
-                        editTextQYWXAppCorpID.getText().toString().trim(),
-                        editTextQYWXAppAgentID.getText().toString().trim(),
-                        editTextQYWXAppSecret.getText().toString().trim(),
-                        editTextQYWXAppToUser.getText().toString().trim(),
-                        switchQYWXAppAtAll.isChecked());
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(QYWXAppSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
             show.dismiss();
         });
+
         buttonQYWXAppDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -994,21 +1145,123 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
-        buttonQYWXAppTest.setOnClickListener(view -> {
 
+        buttonQYWXAppTest.setOnClickListener(view -> {
             QYWXAppSettingVo QYWXAppSettingVoNew = new QYWXAppSettingVo(
                     editTextQYWXAppCorpID.getText().toString().trim(),
                     editTextQYWXAppAgentID.getText().toString().trim(),
-                    editTextQYWXAppSecret.getText().toString().trim(),
+                    editTextQYWXAppSecret.getText().trim(),
                     editTextQYWXAppToUser.getText().toString().trim(),
                     switchQYWXAppAtAll.isChecked());
+            if (!QYWXAppSettingVoNew.checkParms()) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_webcom_app_parm, Toast.LENGTH_LONG).show();
+                return;
+            }
             if (QYWXAppSettingVoNew.getToUser().isEmpty()) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_at_mobiles, Toast.LENGTH_LONG).show();
                 return;
             }
 
             try {
-                SenderQyWxAppMsg.sendMsg(0, handler, senderModel, QYWXAppSettingVoNew, R.string.test_content + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())));
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderQyWxAppMsg.sendMsg(0, handler, null, senderModel, QYWXAppSettingVoNew, smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
+            }
+        });
+    }
+
+    //Server酱·Turbo版
+    private void setServerChan(final SenderModel senderModel, final boolean isClone) {
+        ServerChanSettingVo serverchanSettingVo = null;
+        //try phrase json setting
+        if (senderModel != null) {
+            String jsonSettingStr = senderModel.getJsonSetting();
+            if (jsonSettingStr != null) {
+                serverchanSettingVo = JSON.parseObject(jsonSettingStr, ServerChanSettingVo.class);
+            }
+        }
+
+        final AlertDialog.Builder alertDialog71 = new AlertDialog.Builder(SenderActivity.this);
+        View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_serverchan, null);
+
+        final EditText editTextServerChanName = view1.findViewById(R.id.editTextServerChanName);
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchServerChanEnable = view1.findViewById(R.id.switchServerChanEnable);
+        if (senderModel != null) {
+            editTextServerChanName.setText(senderModel.getName());
+            switchServerChanEnable.setChecked(senderModel.getStatusChecked());
+        }
+
+        final ClearEditText editTextServerChanSendKey = view1.findViewById(R.id.editTextServerChanSendKey);
+        if (serverchanSettingVo != null)
+            editTextServerChanSendKey.setText(serverchanSettingVo.getSendKey());
+
+        Button buttonServerChanOk = view1.findViewById(R.id.buttonServerChanOk);
+        Button buttonServerChanDel = view1.findViewById(R.id.buttonServerChanDel);
+        Button buttonServerChanTest = view1.findViewById(R.id.buttonServerChanTest);
+        alertDialog71
+                .setTitle(R.string.setserverchantitle)
+                .setIcon(R.mipmap.serverchan)
+                .setView(view1)
+                .create();
+        final AlertDialog show = alertDialog71.show();
+
+        buttonServerChanOk.setOnClickListener(view -> {
+            String senderName = editTextServerChanName.getText().toString().trim();
+            int senderStatus = switchServerChanEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String serverChanServer = editTextServerChanSendKey.getText().trim();
+            if (TextUtils.isEmpty(serverChanServer)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_sendkey, Toast.LENGTH_LONG).show();
+                return;
+            }
+            ServerChanSettingVo serverChanSettingVoNew = new ServerChanSettingVo(serverChanServer);
+
+            if (isClone || senderModel == null) {
+                SenderModel newSenderModel = new SenderModel();
+                newSenderModel.setName(senderName);
+                newSenderModel.setType(TYPE_SERVER_CHAN);
+                newSenderModel.setStatus(senderStatus);
+                newSenderModel.setJsonSetting(JSON.toJSONString(serverChanSettingVoNew));
+                SenderUtil.addSender(newSenderModel);
+                initSenders();
+                adapter.add(senderModels);
+            } else {
+                senderModel.setName(senderName);
+                senderModel.setType(TYPE_SERVER_CHAN);
+                senderModel.setStatus(senderStatus);
+                senderModel.setJsonSetting(JSON.toJSONString(serverChanSettingVoNew));
+                SenderUtil.updateSender(senderModel);
+                initSenders();
+                adapter.update(senderModels);
+            }
+            show.dismiss();
+        });
+
+        buttonServerChanDel.setOnClickListener(view -> {
+            if (senderModel != null) {
+                SenderUtil.delSender(senderModel.getId());
+                initSenders();
+                adapter.del(senderModels);
+            }
+            show.dismiss();
+        });
+
+        buttonServerChanTest.setOnClickListener(view -> {
+            String serverChanServer = editTextServerChanSendKey.getText().trim();
+            if (TextUtils.isEmpty(serverChanServer)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_sendkey, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderServerChanMsg.sendMsg(0, handler, null, serverChanServer, smsVo.getMobile(), smsVo.getSmsVoForSend());
             } catch (Exception e) {
                 Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
                 e.printStackTrace();
@@ -1031,7 +1284,11 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_telegram, null);
 
         final EditText editTextTelegramName = view1.findViewById(R.id.editTextTelegramName);
-        if (senderModel != null) editTextTelegramName.setText(senderModel.getName());
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchTelegramEnable = view1.findViewById(R.id.switchTelegramEnable);
+        if (senderModel != null) {
+            editTextTelegramName.setText(senderModel.getName());
+            switchTelegramEnable.setChecked(senderModel.getStatusChecked());
+        }
 
         final ClearEditText editTextTelegramApiToken = view1.findViewById(R.id.editTextTelegramApiToken);
         final EditText editTextTelegramChatId = view1.findViewById(R.id.editTextTelegramChatId);
@@ -1103,52 +1360,60 @@ public class SenderActivity extends AppCompatActivity {
         final AlertDialog show = alertDialog71.show();
 
         buttonTelegramOk.setOnClickListener(view -> {
+            String senderName = editTextTelegramName.getText().toString().trim();
+            int senderStatus = switchTelegramEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String apiToken = editTextTelegramApiToken.getText().trim();
+            String chatId = editTextTelegramChatId.getText().toString().trim();
+            if (apiToken.isEmpty() || chatId.isEmpty()) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_apiToken_or_chatId, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            int proxyTypeId = radioGroupProxyType.getCheckedRadioButtonId();
+            String proxyHost = editTextProxyHost.getText().toString().trim();
+            String proxyPort = editTextProxyPort.getText().toString().trim();
+            if (proxyTypeId != R.id.btnProxyNone && (TextUtils.isEmpty(proxyHost) || TextUtils.isEmpty(proxyPort))) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_host_or_port, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            boolean proxyAuthenticator = switchProxyAuthenticator.isChecked();
+            String proxyUsername = editTextProxyUsername.getText().toString().trim();
+            String proxyPassword = editTextProxyPassword.getText().trim();
+            if (proxyAuthenticator && TextUtils.isEmpty(proxyUsername) && TextUtils.isEmpty(proxyPassword)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_username_or_password, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String method = radioGroupTelegramMethod.getCheckedRadioButtonId() == R.id.radioTelegramMethodGet ? "GET" : "POST";
+            TelegramSettingVo telegramSettingVoNew = new TelegramSettingVo(apiToken, chatId, proxyTypeId, proxyHost, proxyPort, proxyAuthenticator, proxyUsername, proxyPassword, method);
 
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextTelegramName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_TELEGRAM);
-                newSenderModel.setStatus(STATUS_ON);
-                TelegramSettingVo telegramSettingVoNew = new TelegramSettingVo(
-                        editTextTelegramApiToken.getText().toString().trim(),
-                        editTextTelegramChatId.getText().toString().trim(),
-                        radioGroupProxyType.getCheckedRadioButtonId(),
-                        editTextProxyHost.getText().toString().trim(),
-                        editTextProxyPort.getText().toString().trim(),
-                        switchProxyAuthenticator.isChecked(),
-                        editTextProxyUsername.getText().toString().trim(),
-                        editTextProxyPassword.getText().toString().trim(),
-                        (radioGroupTelegramMethod.getCheckedRadioButtonId() == R.id.radioTelegramMethodGet ? "GET" : "POST")
-
-                );
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(telegramSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextTelegramName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_TELEGRAM);
-                senderModel.setStatus(STATUS_ON);
-                TelegramSettingVo telegramSettingVoNew = new TelegramSettingVo(
-                        editTextTelegramApiToken.getText().toString().trim(),
-                        editTextTelegramChatId.getText().toString().trim(),
-                        radioGroupProxyType.getCheckedRadioButtonId(),
-                        editTextProxyHost.getText().toString().trim(),
-                        editTextProxyPort.getText().toString().trim(),
-                        switchProxyAuthenticator.isChecked(),
-                        editTextProxyUsername.getText().toString().trim(),
-                        editTextProxyPassword.getText().toString().trim(),
-                        (radioGroupTelegramMethod.getCheckedRadioButtonId() == R.id.radioTelegramMethodGet ? "GET" : "POST")
-                );
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(telegramSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
             show.dismiss();
-
         });
+
         buttonTelegramDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -1157,29 +1422,40 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonTelegramTest.setOnClickListener(view -> {
-            String apiToken = editTextTelegramApiToken.getText().toString().trim();
+            String apiToken = editTextTelegramApiToken.getText().trim();
             String chatId = editTextTelegramChatId.getText().toString().trim();
-            if (!apiToken.isEmpty() && !chatId.isEmpty()) {
-                try {
-                    TelegramSettingVo telegramSettingVoNew = new TelegramSettingVo(
-                            apiToken,
-                            chatId,
-                            radioGroupProxyType.getCheckedRadioButtonId(),
-                            editTextProxyHost.getText().toString().trim(),
-                            editTextProxyPort.getText().toString().trim(),
-                            switchProxyAuthenticator.isChecked(),
-                            editTextProxyUsername.getText().toString().trim(),
-                            editTextProxyPassword.getText().toString().trim(),
-                            (radioGroupTelegramMethod.getCheckedRadioButtonId() == R.id.radioTelegramMethodGet ? "GET" : "POST")
-                    );
-                    SenderTelegramMsg.sendMsg(0, handler, telegramSettingVoNew, getString(R.string.test_phone_num), getString(R.string.test_sms), telegramSettingVoNew.getMethod());
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
+            if (apiToken.isEmpty() || chatId.isEmpty()) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_apiToken_or_chatId, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            int proxyTypeId = radioGroupProxyType.getCheckedRadioButtonId();
+            String proxyHost = editTextProxyHost.getText().toString().trim();
+            String proxyPort = editTextProxyPort.getText().toString().trim();
+            if (proxyTypeId != R.id.btnProxyNone && (TextUtils.isEmpty(proxyHost) || TextUtils.isEmpty(proxyPort))) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_host_or_port, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            boolean proxyAuthenticator = switchProxyAuthenticator.isChecked();
+            String proxyUsername = editTextProxyUsername.getText().toString().trim();
+            String proxyPassword = editTextProxyPassword.getText().trim();
+            if (proxyAuthenticator && TextUtils.isEmpty(proxyUsername) && TextUtils.isEmpty(proxyPassword)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_username_or_password, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String method = radioGroupTelegramMethod.getCheckedRadioButtonId() == R.id.radioTelegramMethodGet ? "GET" : "POST";
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                TelegramSettingVo telegramSettingVoNew = new TelegramSettingVo(apiToken, chatId, proxyTypeId, proxyHost, proxyPort, proxyAuthenticator, proxyUsername, proxyPassword, method);
+                SenderTelegramMsg.sendMsg(0, handler, null, telegramSettingVoNew, smsVo.getMobile(), smsVo.getSmsVoForSend(), telegramSettingVoNew.getMethod());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
             }
         });
     }
@@ -1200,13 +1476,20 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_sms, null);
 
         final EditText editTextSmsName = view1.findViewById(R.id.editTextSmsName);
-        if (senderModel != null) editTextSmsName.setText(senderModel.getName());
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchSmsEnable = view1.findViewById(R.id.switchSmsEnable);
+        if (senderModel != null) {
+            editTextSmsName.setText(senderModel.getName());
+            switchSmsEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final RadioGroup radioGroupSmsSimSlot = view1.findViewById(R.id.radioGroupSmsSimSlot);
-        if (smsSettingVo != null) radioGroupSmsSimSlot.check(smsSettingVo.getSmsSimSlotCheckId());
         final EditText editTextSmsMobiles = view1.findViewById(R.id.editTextSmsMobiles);
-        if (smsSettingVo != null) editTextSmsMobiles.setText(smsSettingVo.getMobiles());
         @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchSmsOnlyNoNetwork = view1.findViewById(R.id.switchSmsOnlyNoNetwork);
-        if (smsSettingVo != null) switchSmsOnlyNoNetwork.setChecked(smsSettingVo.getOnlyNoNetwork());
+        if (smsSettingVo != null) {
+            radioGroupSmsSimSlot.check(smsSettingVo.getSmsSimSlotCheckId());
+            editTextSmsMobiles.setText(smsSettingVo.getMobiles());
+            switchSmsOnlyNoNetwork.setChecked(smsSettingVo.getOnlyNoNetwork());
+        }
 
         Button buttonSmsOk = view1.findViewById(R.id.buttonSmsOk);
         Button buttonSmsDel = view1.findViewById(R.id.buttonSmsDel);
@@ -1219,39 +1502,51 @@ public class SenderActivity extends AppCompatActivity {
         final AlertDialog show = alertDialog71.show();
 
         buttonSmsOk.setOnClickListener(view -> {
+            String senderName = editTextSmsName.getText().toString().trim();
+            int senderStatus = switchSmsEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            Boolean onlyNoNetwork = switchSmsOnlyNoNetwork.isChecked();
+            String mobiles = editTextSmsMobiles.getText().toString().trim();
+            if (TextUtils.isEmpty(mobiles)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_phone_num, Toast.LENGTH_LONG).show();
+                return;
+            }
 
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextSmsName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_SMS);
-                newSenderModel.setStatus(STATUS_ON);
+                newSenderModel.setStatus(senderStatus);
                 SmsSettingVo smsSettingVoNew = new SmsSettingVo(
                         newSenderModel.getSmsSimSlotId(radioGroupSmsSimSlot.getCheckedRadioButtonId()),
-                        editTextSmsMobiles.getText().toString().trim(),
-                        switchSmsOnlyNoNetwork.isChecked()
+                        mobiles,
+                        onlyNoNetwork
                 );
                 newSenderModel.setJsonSetting(JSON.toJSONString(smsSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextSmsName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_SMS);
-                senderModel.setStatus(STATUS_ON);
+                senderModel.setStatus(senderStatus);
                 SmsSettingVo smsSettingVoNew = new SmsSettingVo(
                         senderModel.getSmsSimSlotId(radioGroupSmsSimSlot.getCheckedRadioButtonId()),
-                        editTextSmsMobiles.getText().toString().trim(),
-                        switchSmsOnlyNoNetwork.isChecked()
+                        mobiles,
+                        onlyNoNetwork
                 );
                 senderModel.setJsonSetting(JSON.toJSONString(smsSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
             show.dismiss();
-
         });
+
         buttonSmsDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -1260,22 +1555,22 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonSmsTest.setOnClickListener(view -> {
-            int simSlot = 0;
-            if (R.id.btnSmsSimSlot2 == radioGroupSmsSimSlot.getCheckedRadioButtonId()) {
-                simSlot = 1;
-            }
-            String mobiles = editTextSmsMobiles.getText().toString().trim();
+            int simSlot = R.id.btnSmsSimSlot2 == radioGroupSmsSimSlot.getCheckedRadioButtonId() ? 1 : 0;
             Boolean onlyNoNetwork = switchSmsOnlyNoNetwork.isChecked();
-            if (!mobiles.isEmpty()) {
-                try {
-                    SenderSmsMsg.sendMsg(0, handler, simSlot, mobiles, onlyNoNetwork, getString(R.string.test_phone_num), getString(R.string.test_sms));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
+            String mobiles = editTextSmsMobiles.getText().toString().trim();
+            if (TextUtils.isEmpty(mobiles)) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_phone_num, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderSmsMsg.sendMsg(0, handler, simSlot, mobiles, onlyNoNetwork, smsVo.getMobile(), smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
             }
         });
     }
@@ -1295,14 +1590,18 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_feishu, null);
 
         final EditText editTextFeishuName = view1.findViewById(R.id.editTextFeishuName);
-        if (senderModel != null)
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchFeishuEnable = view1.findViewById(R.id.switchFeishuEnable);
+        if (senderModel != null) {
             editTextFeishuName.setText(senderModel.getName());
+            switchFeishuEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final EditText editTextFeishuWebhook = view1.findViewById(R.id.editTextFeishuWebhook);
-        if (feiShuSettingVo != null)
-            editTextFeishuWebhook.setText(feiShuSettingVo.getWebhook());
         final ClearEditText editTextFeishuSecret = view1.findViewById(R.id.editTextFeishuSecret);
-        if (feiShuSettingVo != null)
+        if (feiShuSettingVo != null) {
+            editTextFeishuWebhook.setText(feiShuSettingVo.getWebhook());
             editTextFeishuSecret.setText(feiShuSettingVo.getSecret());
+        }
 
         Button buttonFeishuOk = view1.findViewById(R.id.buttonFeishuOk);
         Button buttonFeishuDel = view1.findViewById(R.id.buttonFeishuDel);
@@ -1314,26 +1613,34 @@ public class SenderActivity extends AppCompatActivity {
                 .create();
         final AlertDialog show = alertDialog71.show();
         buttonFeishuOk.setOnClickListener(view -> {
+            String senderName = editTextFeishuName.getText().toString().trim();
+            int senderStatus = switchFeishuEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
 
+            String webHook = editTextFeishuWebhook.getText().toString().trim();
+            String secret = editTextFeishuSecret.getText().trim();
+            if (!CommonUtil.checkUrl(webHook, false)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_webhook, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            FeiShuSettingVo feiShuSettingVoNew = new FeiShuSettingVo(webHook, secret);
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextFeishuName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_FEISHU);
-                newSenderModel.setStatus(STATUS_ON);
-                FeiShuSettingVo feiShuSettingVoNew = new FeiShuSettingVo(
-                        editTextFeishuWebhook.getText().toString().trim(),
-                        editTextFeishuSecret.getText().toString().trim());
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(feiShuSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextFeishuName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_FEISHU);
-                senderModel.setStatus(STATUS_ON);
-                FeiShuSettingVo feiShuSettingVoNew = new FeiShuSettingVo(
-                        editTextFeishuWebhook.getText().toString().trim(),
-                        editTextFeishuSecret.getText().toString().trim());
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(feiShuSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
@@ -1352,17 +1659,19 @@ public class SenderActivity extends AppCompatActivity {
         });
 
         buttonFeishuTest.setOnClickListener(view -> {
-            String token = editTextFeishuWebhook.getText().toString().trim();
-            String secret = editTextFeishuSecret.getText().toString().trim();
-            if (!token.isEmpty()) {
-                try {
-                    SenderFeishuMsg.sendMsg(0, handler, token, secret, getString(R.string.test_phone_num), new Date(), getString(R.string.test_sms));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
+            String webHook = editTextFeishuWebhook.getText().toString().trim();
+            String secret = editTextFeishuSecret.getText().trim();
+            if (!CommonUtil.checkUrl(webHook, false)) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_webhook, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderFeishuMsg.sendMsg(0, handler, null, webHook, secret, smsVo.getMobile(), new Date(), smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
             }
         });
     }
@@ -1382,6 +1691,12 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_pushplus, null);
 
         final EditText editTextPushPlusName = view1.findViewById(R.id.editTextPushPlusName);
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchPushPlusEnable = view1.findViewById(R.id.switchPushPlusEnable);
+        if (senderModel != null) {
+            editTextPushPlusName.setText(senderModel.getName());
+            switchPushPlusEnable.setChecked(senderModel.getStatusChecked());
+        }
+
         final ClearEditText editTextPushPlusToken = view1.findViewById(R.id.editTextPushPlusToken);
         final EditText editTextPushPlusTopic = view1.findViewById(R.id.editTextPushPlusTopic);
         final EditText editTextPushPlusTemplate = view1.findViewById(R.id.editTextPushPlusTemplate);
@@ -1389,9 +1704,9 @@ public class SenderActivity extends AppCompatActivity {
         final EditText editTextPushPlusWebhook = view1.findViewById(R.id.editTextPushPlusWebhook);
         final EditText editTextPushPlusCallbackUrl = view1.findViewById(R.id.editTextPushPlusCallbackUrl);
         final EditText editTextPushPlusValidTime = view1.findViewById(R.id.editTextPushPlusValidTime);
+        final EditText editTextPushPlusTitle = view1.findViewById(R.id.editTextPushPlusTitle);
 
         if (pushPlusSettingVo != null) {
-            editTextPushPlusName.setText(senderModel.getName());
             editTextPushPlusToken.setText(pushPlusSettingVo.getToken());
             editTextPushPlusTopic.setText(pushPlusSettingVo.getTopic());
             editTextPushPlusTemplate.setText(pushPlusSettingVo.getTemplate());
@@ -1399,6 +1714,7 @@ public class SenderActivity extends AppCompatActivity {
             editTextPushPlusWebhook.setText(pushPlusSettingVo.getWebhook());
             editTextPushPlusCallbackUrl.setText(pushPlusSettingVo.getCallbackUrl());
             editTextPushPlusValidTime.setText(pushPlusSettingVo.getValidTime());
+            editTextPushPlusTitle.setText(pushPlusSettingVo.getTitleTemplate());
         }
 
         Button buttonPushPlusOk = view1.findViewById(R.id.buttonPushPlusOk);
@@ -1411,38 +1727,42 @@ public class SenderActivity extends AppCompatActivity {
                 .create();
         final AlertDialog show = alertDialog71.show();
         buttonPushPlusOk.setOnClickListener(view -> {
+            String senderName = editTextPushPlusName.getText().toString().trim();
+            int senderStatus = switchPushPlusEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            PushPlusSettingVo pushPlusSettingVoNew = new PushPlusSettingVo(
+                    editTextPushPlusToken.getText().trim(),
+                    editTextPushPlusTopic.getText().toString().trim(),
+                    editTextPushPlusTemplate.getText().toString().trim(),
+                    editTextPushPlusChannel.getText().toString().trim(),
+                    editTextPushPlusWebhook.getText().toString().trim(),
+                    editTextPushPlusCallbackUrl.getText().toString().trim(),
+                    editTextPushPlusValidTime.getText().toString().trim(),
+                    editTextPushPlusTitle.getText().toString().trim()
+            );
+            if (TextUtils.isEmpty(pushPlusSettingVoNew.getToken())) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_token, Toast.LENGTH_LONG).show();
+                return;
+            }
 
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextPushPlusName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_PUSHPLUS);
-                newSenderModel.setStatus(STATUS_ON);
-                PushPlusSettingVo pushPlusSettingVoNew = new PushPlusSettingVo(
-                        editTextPushPlusToken.getText().toString().trim(),
-                        editTextPushPlusTopic.getText().toString().trim(),
-                        editTextPushPlusTemplate.getText().toString().trim(),
-                        editTextPushPlusChannel.getText().toString().trim(),
-                        editTextPushPlusWebhook.getText().toString().trim(),
-                        editTextPushPlusCallbackUrl.getText().toString().trim(),
-                        editTextPushPlusValidTime.getText().toString().trim()
-                );
+                newSenderModel.setStatus(senderStatus);
+
                 newSenderModel.setJsonSetting(JSON.toJSONString(pushPlusSettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextPushPlusName.getText().toString());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_PUSHPLUS);
-                senderModel.setStatus(STATUS_ON);
-                PushPlusSettingVo pushPlusSettingVoNew = new PushPlusSettingVo(
-                        editTextPushPlusToken.getText().toString().trim(),
-                        editTextPushPlusTopic.getText().toString().trim(),
-                        editTextPushPlusTemplate.getText().toString().trim(),
-                        editTextPushPlusChannel.getText().toString().trim(),
-                        editTextPushPlusWebhook.getText().toString().trim(),
-                        editTextPushPlusCallbackUrl.getText().toString().trim(),
-                        editTextPushPlusValidTime.getText().toString().trim()
-                );
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(pushPlusSettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
@@ -1461,27 +1781,61 @@ public class SenderActivity extends AppCompatActivity {
         });
 
         buttonPushPlusTest.setOnClickListener(view -> {
+
+            String title = editTextPushPlusTitle.getText().toString().trim();
+            if (title.isEmpty()) title = "SmsForwarder Title";
+
             PushPlusSettingVo pushPlusSettingVoNew = new PushPlusSettingVo(
-                    editTextPushPlusToken.getText().toString().trim(),
+                    editTextPushPlusToken.getText().trim(),
                     editTextPushPlusTopic.getText().toString().trim(),
                     editTextPushPlusTemplate.getText().toString().trim(),
                     editTextPushPlusChannel.getText().toString().trim(),
                     editTextPushPlusWebhook.getText().toString().trim(),
                     editTextPushPlusCallbackUrl.getText().toString().trim(),
-                    editTextPushPlusValidTime.getText().toString().trim()
+                    editTextPushPlusValidTime.getText().toString().trim(),
+                    title
             );
 
-            String token = pushPlusSettingVoNew.getToken();
-            if (token != null && !token.isEmpty()) {
-                try {
-                    SenderPushPlusMsg.sendMsg(0, handler, pushPlusSettingVoNew, "SmsForwarder", getString(R.string.test_content) + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())));
-                } catch (Exception e) {
-                    Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
-            } else {
+            if (TextUtils.isEmpty(pushPlusSettingVoNew.getToken())) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_token, Toast.LENGTH_LONG).show();
+                return;
             }
+
+            try {
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderPushPlusMsg.sendMsg(0, handler, null, pushPlusSettingVoNew, smsVo.getTitleForSend(title), smsVo.getSmsVoForSend());
+            } catch (Exception e) {
+                Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
+            }
+        });
+
+        Button buttonInsertSender = view1.findViewById(R.id.bt_insert_sender);
+        buttonInsertSender.setOnClickListener(view -> {
+            editTextPushPlusTitle.setFocusable(true);
+            editTextPushPlusTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextPushPlusTitle, getString(R.string.tag_from));
+        });
+
+        Button buttonInsertExtra = view1.findViewById(R.id.bt_insert_extra);
+        buttonInsertExtra.setOnClickListener(view -> {
+            editTextPushPlusTitle.setFocusable(true);
+            editTextPushPlusTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextPushPlusTitle, getString(R.string.tag_card_slot));
+        });
+
+        Button buttonInsertTime = view1.findViewById(R.id.bt_insert_time);
+        buttonInsertTime.setOnClickListener(view -> {
+            editTextPushPlusTitle.setFocusable(true);
+            editTextPushPlusTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextPushPlusTitle, getString(R.string.tag_receive_time));
+        });
+
+        Button buttonInsertDeviceName = view1.findViewById(R.id.bt_insert_device_name);
+        buttonInsertDeviceName.setOnClickListener(view -> {
+            editTextPushPlusTitle.setFocusable(true);
+            editTextPushPlusTitle.requestFocus();
+            CommonUtil.insertOrReplaceText2Cursor(editTextPushPlusTitle, getString(R.string.tag_device_name));
         });
     }
 
@@ -1501,7 +1855,11 @@ public class SenderActivity extends AppCompatActivity {
         View view1 = View.inflate(SenderActivity.this, R.layout.alert_dialog_setview_gotify, null);
 
         final EditText editTextGotifyName = view1.findViewById(R.id.editTextGotifyName);
-        if (senderModel != null) editTextGotifyName.setText(senderModel.getName());
+        @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch switchGotifyEnable = view1.findViewById(R.id.switchGotifyEnable);
+        if (senderModel != null) {
+            editTextGotifyName.setText(senderModel.getName());
+            switchGotifyEnable.setChecked(senderModel.getStatusChecked());
+        }
 
         final ClearEditText editTextGotifyWebServer = view1.findViewById(R.id.editTextGotifyWebServer);
         final EditText editTextGotifyTitle = view1.findViewById(R.id.editTextGotifyTitle);
@@ -1523,8 +1881,15 @@ public class SenderActivity extends AppCompatActivity {
         final AlertDialog show = alertDialog71.show();
 
         buttonGotifyOk.setOnClickListener(view -> {
-            String webServer = editTextGotifyWebServer.getText().toString().trim();
-            if (webServer.isEmpty()) {
+            String senderName = editTextGotifyName.getText().toString().trim();
+            int senderStatus = switchGotifyEnable.isChecked() ? STATUS_ON : STATUS_OFF;
+            if (TextUtils.isEmpty(senderName)) {
+                Toast.makeText(SenderActivity.this, R.string.invalid_name, Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String webServer = editTextGotifyWebServer.getText().trim();
+            if (!CommonUtil.checkUrl(webServer, false)) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_webserver, Toast.LENGTH_LONG).show();
                 return;
             }
@@ -1538,25 +1903,25 @@ public class SenderActivity extends AppCompatActivity {
 
             if (isClone || senderModel == null) {
                 SenderModel newSenderModel = new SenderModel();
-                newSenderModel.setName(editTextGotifyName.getText().toString().trim());
+                newSenderModel.setName(senderName);
                 newSenderModel.setType(TYPE_GOTIFY);
-                newSenderModel.setStatus(STATUS_ON);
+                newSenderModel.setStatus(senderStatus);
                 newSenderModel.setJsonSetting(JSON.toJSONString(gotifySettingVoNew));
                 SenderUtil.addSender(newSenderModel);
                 initSenders();
                 adapter.add(senderModels);
             } else {
-                senderModel.setName(editTextGotifyName.getText().toString().trim());
+                senderModel.setName(senderName);
                 senderModel.setType(TYPE_GOTIFY);
-                senderModel.setStatus(STATUS_ON);
+                senderModel.setStatus(senderStatus);
                 senderModel.setJsonSetting(JSON.toJSONString(gotifySettingVoNew));
                 SenderUtil.updateSender(senderModel);
                 initSenders();
                 adapter.update(senderModels);
             }
-
             show.dismiss();
         });
+
         buttonGotifyDel.setOnClickListener(view -> {
             if (senderModel != null) {
                 SenderUtil.delSender(senderModel.getId());
@@ -1565,9 +1930,10 @@ public class SenderActivity extends AppCompatActivity {
             }
             show.dismiss();
         });
+
         buttonGotifyTest.setOnClickListener(view -> {
-            String webServer = editTextGotifyWebServer.getText().toString().trim();
-            if (webServer.isEmpty()) {
+            String webServer = editTextGotifyWebServer.getText().trim();
+            if (!CommonUtil.checkUrl(webServer, false)) {
                 Toast.makeText(SenderActivity.this, R.string.invalid_webserver, Toast.LENGTH_LONG).show();
                 return;
             }
@@ -1580,7 +1946,8 @@ public class SenderActivity extends AppCompatActivity {
             GotifySettingVo gotifySettingVoNew = new GotifySettingVo(webServer, title, priority);
 
             try {
-                SenderGotifyMsg.sendMsg(0, handler, gotifySettingVoNew, title, R.string.test_content + (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())));
+                SmsVo smsVo = new SmsVo(getString(R.string.test_phone_num), getString(R.string.test_sender_sms), new Date(), getString(R.string.test_sim_info));
+                SenderGotifyMsg.sendMsg(0, handler, null, gotifySettingVoNew, smsVo.getTitleForSend(title), smsVo.getSmsVoForSend());
             } catch (Exception e) {
                 Toast.makeText(SenderActivity.this, getString(R.string.failed_to_fwd) + e.getMessage(), Toast.LENGTH_LONG).show();
                 e.printStackTrace();
@@ -1588,55 +1955,33 @@ public class SenderActivity extends AppCompatActivity {
 
         });
 
-
         Button buttonInsertSender = view1.findViewById(R.id.bt_insert_sender);
         buttonInsertSender.setOnClickListener(view -> {
             editTextGotifyTitle.setFocusable(true);
             editTextGotifyTitle.requestFocus();
-            editTextGotifyTitle.append("{{来源号码}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextGotifyTitle, getString(R.string.tag_from));
         });
 
         Button buttonInsertExtra = view1.findViewById(R.id.bt_insert_extra);
         buttonInsertExtra.setOnClickListener(view -> {
             editTextGotifyTitle.setFocusable(true);
             editTextGotifyTitle.requestFocus();
-            editTextGotifyTitle.append("{{卡槽信息}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextGotifyTitle, getString(R.string.tag_card_slot));
         });
 
         Button buttonInsertTime = view1.findViewById(R.id.bt_insert_time);
         buttonInsertTime.setOnClickListener(view -> {
             editTextGotifyTitle.setFocusable(true);
             editTextGotifyTitle.requestFocus();
-            editTextGotifyTitle.append("{{接收时间}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextGotifyTitle, getString(R.string.tag_receive_time));
         });
 
         Button buttonInsertDeviceName = view1.findViewById(R.id.bt_insert_device_name);
         buttonInsertDeviceName.setOnClickListener(view -> {
             editTextGotifyTitle.setFocusable(true);
             editTextGotifyTitle.requestFocus();
-            editTextGotifyTitle.append("{{设备名称}}");
+            CommonUtil.insertOrReplaceText2Cursor(editTextGotifyTitle, getString(R.string.tag_device_name));
         });
 
     }
-
-    @Override
-    protected void onDestroy() {
-        Log.d(TAG, "onDestroy");
-        super.onDestroy();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        MobclickAgent.onPageStart(TAG);
-        MobclickAgent.onResume(this);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        MobclickAgent.onPageEnd(TAG);
-        MobclickAgent.onPause(this);
-    }
-
 }
