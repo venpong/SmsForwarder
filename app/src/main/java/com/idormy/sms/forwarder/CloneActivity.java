@@ -10,12 +10,12 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.alibaba.fastjson.JSON;
+import com.hjq.toast.ToastUtils;
 import com.idormy.sms.forwarder.model.vo.CloneInfoVo;
 import com.idormy.sms.forwarder.receiver.BaseServlet;
 import com.idormy.sms.forwarder.receiver.RebootBroadcastReceiver;
@@ -62,7 +62,7 @@ public class CloneActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == TOAST) {
-                Toast.makeText(CloneActivity.this, msg.getData().getString("DATA"), Toast.LENGTH_LONG).show();
+                ToastUtils.delayedShow(msg.getData().getString("DATA"), 3000);
             } else if (msg.what == DOWNLOAD) {
                 String savePath = context.getCacheDir().getPath() + File.separator + BackupDbTask.BACKUP_FILE;
                 Log.d(TAG, savePath);
@@ -110,6 +110,7 @@ public class CloneActivity extends AppCompatActivity {
             sendBtn.setText(R.string.send);
             sendTxt.setText(R.string.server_has_stopped);
         }
+        //noinspection CommentedOutCode
         sendBtn.setOnClickListener(v -> {
             if (!HttpServer.asRunning() && NetUtil.NETWORK_WIFI != NetUtil.getNetWorkStatus()) {
                 Toast(handError, TAG, getString(R.string.no_wifi_network));
@@ -117,9 +118,9 @@ public class CloneActivity extends AppCompatActivity {
             }
 
             //备份文件
-            BackupDbTask task = new BackupDbTask(this);
-            String backup_version = task.doInBackground(BackupDbTask.COMMAND_BACKUP);
-            Log.d(TAG, "backup_version = " + backup_version);
+            //BackupDbTask task = new BackupDbTask(this);
+            //String backup_version = task.doInBackground(BackupDbTask.COMMAND_BACKUP);
+            //Log.d(TAG, "backup_version = " + backup_version);
 
             SettingUtil.switchEnableHttpServer(!SettingUtil.getSwitchEnableHttpServer());
             if (!HttpServer.update()) {
@@ -201,7 +202,9 @@ public class CloneActivity extends AppCompatActivity {
 
                     try {
                         CloneInfoVo cloneInfoVo = JSON.parseObject(responseStr, CloneInfoVo.class);
-                        if (SettingUtil.getVersionCode() != cloneInfoVo.getVersionCode()) {
+                        Log.d(TAG, cloneInfoVo.toString());
+
+                        if (!SettingUtil.getVersionName().equals(cloneInfoVo.getVersionName())) {
                             Toast(handError, TAG, getString(R.string.tips_versions_inconsistent));
                             return;
                         }

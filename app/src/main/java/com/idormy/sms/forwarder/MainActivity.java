@@ -17,16 +17,19 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.hjq.permissions.OnPermissionCallback;
+import com.hjq.permissions.Permission;
+import com.hjq.permissions.XXPermissions;
+import com.hjq.toast.ToastUtils;
 import com.idormy.sms.forwarder.adapter.LogAdapter;
 import com.idormy.sms.forwarder.model.vo.LogVo;
 import com.idormy.sms.forwarder.sender.HttpServer;
@@ -47,6 +50,7 @@ import com.idormy.sms.forwarder.utils.SharedPreferencesHelper;
 import com.idormy.sms.forwarder.utils.SmsUtil;
 import com.idormy.sms.forwarder.utils.TimeUtil;
 import com.idormy.sms.forwarder.view.StepBar;
+import com.melnykov.fab.FloatingActionButton;
 import com.umeng.commonsdk.UMConfigure;
 
 import java.lang.reflect.Method;
@@ -140,6 +144,53 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
         //检查权限是否获取
         PackageManager pm = getPackageManager();
         CommonUtil.CheckPermission(pm, this);
+        XXPermissions.with(this)
+                // 接收短信
+                .permission(Permission.RECEIVE_SMS)
+                // 发送短信
+                .permission(Permission.SEND_SMS)
+                // 读取短信
+                .permission(Permission.READ_SMS)
+                // 读取电话状态
+                .permission(Permission.READ_PHONE_STATE)
+                // 读取手机号码
+                .permission(Permission.READ_PHONE_NUMBERS)
+                // 读取通话记录
+                .permission(Permission.READ_CALL_LOG)
+                // 读取联系人
+                .permission(Permission.READ_CONTACTS)
+                // 储存权限
+                .permission(Permission.Group.STORAGE)
+                // 申请安装包权限
+                //.permission(Permission.REQUEST_INSTALL_PACKAGES)
+                // 申请通知栏权限
+                .permission(Permission.NOTIFICATION_SERVICE)
+                // 申请系统设置权限
+                //.permission(Permission.WRITE_SETTINGS)
+                .request(new OnPermissionCallback() {
+
+                    @Override
+                    public void onGranted(List<String> permissions, boolean all) {
+                        if (all) {
+                            ToastUtils.show(R.string.toast_granted_all);
+                        } else {
+                            ToastUtils.show(R.string.toast_granted_part);
+                        }
+                        SettingUtil.switchEnableSms(true);
+                    }
+
+                    @Override
+                    public void onDenied(List<String> permissions, boolean never) {
+                        if (never) {
+                            ToastUtils.show(R.string.toast_denied_never);
+                            // 如果是被永久拒绝就跳转到应用权限系统设置页面
+                            XXPermissions.startPermissionActivity(MainActivity.this, permissions);
+                        } else {
+                            ToastUtils.show(R.string.toast_denied);
+                        }
+                        SettingUtil.switchEnableSms(false);
+                    }
+                });
 
         //计算浮动按钮位置
         FloatingActionButton btnFloat = findViewById(R.id.btnCleanLog);
@@ -198,7 +249,7 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
                 LogUtil.delLog(id1, null);
                 initTLogs(); //初始化数据
                 showList(logVos);
-                Toast.makeText(getBaseContext(), R.string.delete_log_toast, Toast.LENGTH_SHORT).show();
+                ToastUtils.show(R.string.delete_log_toast);
             });
 
             //添加AlertDialog.Builder对象的setNegativeButton()方法
@@ -243,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
             //省电优化设置为无限制
             if (MyApplication.showHelpTip && Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 if (!KeepAliveUtils.isIgnoreBatteryOptimization(this)) {
-                    Toast.makeText(this, R.string.tips_battery_optimization, Toast.LENGTH_LONG).show();
+                    ToastUtils.delayedShow(R.string.tips_battery_optimization, 3000);
                 }
             }
 
@@ -251,7 +302,7 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
             if (SettingUtil.getSwitchEnableAppNotify() && !CommonUtil.isNotificationListenerServiceEnabled(this)) {
                 CommonUtil.toggleNotificationListenerService(this);
                 SettingUtil.switchEnableAppNotify(false);
-                Toast.makeText(this, R.string.tips_notification_listener, Toast.LENGTH_LONG).show();
+                ToastUtils.delayedShow(R.string.tips_notification_listener, 3000);
                 return;
             }
 
@@ -299,10 +350,10 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
 
         if (requestCode == CommonUtil.NOTIFICATION_REQUEST_CODE) {
             if (CommonUtil.isNotificationListenerServiceEnabled(this)) {
-                Toast.makeText(this, R.string.notification_listener_service_enabled, Toast.LENGTH_SHORT).show();
+                ToastUtils.show(R.string.notification_listener_service_enabled);
                 CommonUtil.toggleNotificationListenerService(this);
             } else {
-                Toast.makeText(this, R.string.notification_listener_service_disabled, Toast.LENGTH_SHORT).show();
+                ToastUtils.show(R.string.notification_listener_service_disabled);
             }
         }
     }
@@ -361,7 +412,7 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
             LogUtil.delLog(id, null);
             initTLogs(); //初始化数据
             showList(logVos);
-            Toast.makeText(MainActivity.this, R.string.delete_log_toast, Toast.LENGTH_SHORT).show();
+            ToastUtils.show(R.string.delete_log_toast);
             dialog.dismiss();
         });
 
@@ -374,7 +425,7 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
         //对于发送失败的消息添加重发按钮
         if (logVo.getForwardStatus() != 2) {
             builder.setPositiveButton(R.string.resend, (dialog, which) -> {
-                Toast.makeText(MainActivity.this, R.string.resend_toast, Toast.LENGTH_SHORT).show();
+                ToastUtils.show(R.string.resend_toast);
                 SendUtil.resendMsgByLog(MainActivity.this, handler, logVo);
                 dialog.dismiss();
             });
@@ -488,6 +539,12 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
         dialog.setContentView(inflate);
         Window dialogWindow = dialog.getWindow();
         dialogWindow.setGravity(Gravity.CENTER);
+
+        //自适应大小
+        WindowManager.LayoutParams dialogParams = dialogWindow.getAttributes();
+        dialogParams.width = (int) (context.getResources().getDisplayMetrics().widthPixels * 0.85);
+        //dialogParams.height = (int) (context.getResources().getDisplayMetrics().heightPixels * 0.7);
+        dialogWindow.setAttributes(dialogParams);
 
         dialog.setCancelable(false);
         dialog.show();
