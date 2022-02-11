@@ -16,6 +16,8 @@ import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -46,6 +48,7 @@ import com.idormy.sms.forwarder.utils.SettingUtil;
 import com.idormy.sms.forwarder.view.ClearEditText;
 import com.idormy.sms.forwarder.view.StepBar;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -99,7 +102,7 @@ public class SettingActivity extends AppCompatActivity {
         //开机启动
         checkWithReboot(findViewById(R.id.switch_with_reboot));
         //电池优化设置
-        batterySetting(findViewById(R.id.switch_battery_setting));
+        batterySetting(findViewById(R.id.layout_battery_setting), findViewById(R.id.switch_battery_setting));
         //不在最近任务列表中显示
         switchExcludeFromRecents(findViewById(R.id.switch_exclude_from_recents));
         //接口请求失败重试时间间隔
@@ -145,7 +148,7 @@ public class SettingActivity extends AppCompatActivity {
                         // 接收短信
                         .permission(Permission.RECEIVE_SMS)
                         // 发送短信
-                        .permission(Permission.SEND_SMS)
+                        //.permission(Permission.SEND_SMS)
                         // 读取短信
                         .permission(Permission.READ_SMS)
                         .request(new OnPermissionCallback() {
@@ -619,7 +622,13 @@ public class SettingActivity extends AppCompatActivity {
     //电池优化设置
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressLint("UseSwitchCompatOrMaterialCode")
-    public void batterySetting(Switch switch_battery_setting) {
+    public void batterySetting(LinearLayout layout_battery_setting, Switch switch_battery_setting) {
+        //安卓6.0以下没有忽略电池优化
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+            layout_battery_setting.setVisibility(View.GONE);
+            return;
+        }
+
         isIgnoreBatteryOptimization = KeepAliveUtils.isIgnoreBatteryOptimization(this);
         switch_battery_setting.setChecked(isIgnoreBatteryOptimization);
 
@@ -880,6 +889,60 @@ public class SettingActivity extends AppCompatActivity {
         });
 
         builder.create().show();
+    }
+
+    //启用menu
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    //menu点击事件
+    @SuppressLint("NonConstantResourceId")
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Intent intent;
+        switch (item.getItemId()) {
+            case R.id.to_app_list:
+                intent = new Intent(this, AppListActivity.class);
+                break;
+            case R.id.to_clone:
+                intent = new Intent(this, CloneActivity.class);
+                break;
+            case R.id.to_about:
+                intent = new Intent(this, AboutActivity.class);
+                break;
+            case R.id.to_help:
+                Uri uri = Uri.parse("https://gitee.com/pp/SmsForwarder/wikis/pages");
+                intent = new Intent(Intent.ACTION_VIEW, uri);
+                break;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+
+        startActivity(intent);
+        return true;
+    }
+
+    //设置menu图标显示
+    @Override
+    public boolean onMenuOpened(int featureId, Menu menu) {
+        Log.d(TAG, "onMenuOpened, featureId=" + featureId);
+        if (menu != null) {
+            if (menu.getClass().getSimpleName().equals("MenuBuilder")) {
+                try {
+                    Method m = menu.getClass().getDeclaredMethod("setOptionalIconsVisible", Boolean.TYPE);
+                    m.setAccessible(true);
+                    m.invoke(menu, true);
+                } catch (NoSuchMethodException e) {
+                    Log.e(TAG, "onMenuOpened", e);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return super.onMenuOpened(featureId, menu);
     }
 
 }

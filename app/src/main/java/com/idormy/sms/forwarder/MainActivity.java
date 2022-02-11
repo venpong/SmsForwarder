@@ -148,7 +148,7 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
                 // 接收短信
                 .permission(Permission.RECEIVE_SMS)
                 // 发送短信
-                .permission(Permission.SEND_SMS)
+                //.permission(Permission.SEND_SMS)
                 // 读取短信
                 .permission(Permission.READ_SMS)
                 // 读取电话状态
@@ -171,22 +171,26 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
 
                     @Override
                     public void onGranted(List<String> permissions, boolean all) {
-                        if (all) {
-                            ToastUtils.show(R.string.toast_granted_all);
-                        } else {
-                            ToastUtils.show(R.string.toast_granted_part);
+                        if (MyApplication.showHelpTip) {
+                            if (all) {
+                                ToastUtils.show(R.string.toast_granted_all);
+                            } else {
+                                ToastUtils.show(R.string.toast_granted_part);
+                            }
                         }
                         SettingUtil.switchEnableSms(true);
                     }
 
                     @Override
                     public void onDenied(List<String> permissions, boolean never) {
-                        if (never) {
-                            ToastUtils.show(R.string.toast_denied_never);
-                            // 如果是被永久拒绝就跳转到应用权限系统设置页面
-                            XXPermissions.startPermissionActivity(MainActivity.this, permissions);
-                        } else {
-                            ToastUtils.show(R.string.toast_denied);
+                        if (MyApplication.showHelpTip) {
+                            if (never) {
+                                ToastUtils.show(R.string.toast_denied_never);
+                                // 如果是被永久拒绝就跳转到应用权限系统设置页面
+                                XXPermissions.startPermissionActivity(MainActivity.this, permissions);
+                            } else {
+                                ToastUtils.show(R.string.toast_denied);
+                            }
                         }
                         SettingUtil.switchEnableSms(false);
                     }
@@ -450,15 +454,11 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
     }
 
     //menu点击事件
-    @SuppressWarnings("CommentedOutCode")
     @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         Intent intent;
         switch (item.getItemId()) {
-            //case R.id.to_setting:
-            //    intent = new Intent(this, SettingActivity.class);
-            //    break;
             case R.id.to_app_list:
                 intent = new Intent(this, AppListActivity.class);
                 break;
@@ -483,7 +483,8 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
     //设置menu图标显示
     @Override
     public boolean onMenuOpened(int featureId, Menu menu) {
-        if (featureId == Window.FEATURE_ACTION_BAR && menu != null) {
+        Log.d(TAG, "onMenuOpened, featureId=" + featureId);
+        if (menu != null) {
             if (menu.getClass().getSimpleName().equals("MenuBuilder")) {
                 try {
                     Method m = menu.getClass().getDeclaredMethod("setOptionalIconsVisible", Boolean.TYPE);
