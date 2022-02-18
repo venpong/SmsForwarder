@@ -56,6 +56,7 @@ public class SenderBarkMsg extends SenderBaseMsg {
         if (!TextUtils.isEmpty(level)) builder.addFormDataPart("level", level);
         if (!TextUtils.isEmpty(sound)) builder.addFormDataPart("sound", sound);
         if (!TextUtils.isEmpty(badge)) builder.addFormDataPart("badge", badge);
+        if (!TextUtils.isEmpty(url)) builder.addFormDataPart("url", url);
 
         int isCode = content.indexOf("验证码");
         int isPassword = content.indexOf("动态密码");
@@ -71,7 +72,7 @@ public class SenderBarkMsg extends SenderBaseMsg {
         }
 
         RequestBody body = builder.build();
-        Log.d(TAG, "method = POST, Body = " + body.toString());
+        Log.d(TAG, "method = POST, Body = " + body);
 
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
         //设置重试拦截器
