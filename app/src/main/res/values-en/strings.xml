@@ -24,6 +24,11 @@
     <string name="clear_logs">Clear logs</string>
     <string name="add_rule">Add rule</string>
     <string name="add_sender">Add sender</string>
+    <string name="headers">Headers</string>
+    <string name="header_key">Key</string>
+    <string name="header_value">Value</string>
+    <string name="header_add">Add Header</string>
+    <string name="header_del">Remove Header</string>h
     <!--AboutActivity-->
     <string name="version">Version</string>
     <string name="check_for_updates">Check for updates</string>
@@ -130,9 +135,6 @@
     <string name="dingding_secret">Secret (optional)</string>
     <string name="dingding_at">At Mobiles</string>
     <string name="dingding_at_tips">e.g. 18888888888,19999999999</string>
-    <string name="email_protocol">Protocol</string>
-    <string name="email_smtp">SMTP</string>
-    <string name="email_imap">IMAP </string>
     <string name="email_host">Server Host</string>
     <string name="smtp_port">Server Port</string>
     <string name="enable_ssl">SSL</string>
@@ -439,4 +441,8 @@
     <string name="one_pixel">One Pixel</string>
     <string name="one_pixel_activity">One Pixel Activity</string>
     <string name="one_pixel_activity_tips">This can change the process priority from 4 to 1</string>
+    <string name="hint_from_add">Fill in the username before @</string>
+    <string name="hint_from_add_full">format: AAA@BBB.CCC</string>
+    <string name="other_mail_type">Other</string>
+    <string name="tips_other_mail_type">For other email addresses, please fill in the complete email address and manually fill in the SMTP server information</string>
 </resources>

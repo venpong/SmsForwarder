@@ -14,7 +14,6 @@ import static com.idormy.sms.forwarder.model.SenderModel.TYPE_SMS;
 import static com.idormy.sms.forwarder.model.SenderModel.TYPE_TELEGRAM;
 import static com.idormy.sms.forwarder.model.SenderModel.TYPE_WEB_NOTIFY;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
@@ -41,12 +40,11 @@ import com.idormy.sms.forwarder.utils.LogUtil;
 import com.idormy.sms.forwarder.utils.NetUtil;
 import com.idormy.sms.forwarder.utils.RuleUtil;
 import com.idormy.sms.forwarder.utils.SettingUtil;
+import com.idormy.sms.forwarder.utils.TimeUtil;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class SendUtil {
     private static final String TAG = "SendUtil";
@@ -98,10 +96,9 @@ public class SendUtil {
      */
     public static void resendMsgByLog(Context context, Handler handler, LogVo logVo) {
         Log.d(TAG, logVo.toString());
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         Date date = new Date();
         try {
-            date = sdf.parse(logVo.getTime());
+            date = TimeUtil.utc2LocalDate(logVo.getTime());
         } catch (ParseException e) {
             Log.e(TAG, "SimpleDateFormat parse error", e);
         }
@@ -213,8 +210,7 @@ public class SendUtil {
                     EmailSettingVo emailSettingVo = JSON.parseObject(senderModel.getJsonSetting(), EmailSettingVo.class);
                     if (emailSettingVo != null) {
                         try {
-                            SenderMailMsg.sendEmail(logId, handError, emailSettingVo.getProtocol(), emailSettingVo.getHost(), emailSettingVo.getPort(), emailSettingVo.getSsl(), emailSettingVo.getFromEmail(), emailSettingVo.getNickname(),
-                                    emailSettingVo.getPwd(), emailSettingVo.getToEmail(), smsVo.getTitleForSend(emailSettingVo.getTitle(), regexReplace), smsVo.getSmsVoForSend(smsTemplate, regexReplace));
+                            SenderMailMsg.sendEmail(logId, handError, emailSettingVo, smsVo.getTitleForSend(emailSettingVo.getTitle(), regexReplace), smsVo.getSmsVoForSend(smsTemplate, regexReplace));
                         } catch (Exception e) {
                             LogUtil.updateLog(logId, 0, e.getMessage());
                             Log.e(TAG, "senderSendMsg: SenderMailMsg error " + e.getMessage());
@@ -229,7 +225,7 @@ public class SendUtil {
                     BarkSettingVo barkSettingVo = JSON.parseObject(senderModel.getJsonSetting(), BarkSettingVo.class);
                     if (barkSettingVo != null) {
                         try {
-                            SenderBarkMsg.sendMsg(logId, handError, retryInterceptor, barkSettingVo, smsVo.getTitleForSend(barkSettingVo.getTitle(), regexReplace), smsVo.getSmsVoForSend(smsTemplate, regexReplace), senderModel.getName());
+                            SenderBarkMsg.sendMsg(logId, handError, retryInterceptor, barkSettingVo, smsVo.getTitleForSend(barkSettingVo.getTitle()), smsVo.getSmsVoForSend(smsTemplate, regexReplace), senderModel.getName());
                         } catch (Exception e) {
                             LogUtil.updateLog(logId, 0, e.getMessage());
                             Log.e(TAG, "senderSendMsg: SenderBarkMsg error " + e.getMessage());
@@ -244,7 +240,7 @@ public class SendUtil {
                     WebNotifySettingVo webNotifySettingVo = JSON.parseObject(senderModel.getJsonSetting(), WebNotifySettingVo.class);
                     if (webNotifySettingVo != null) {
                         try {
-                            SenderWebNotifyMsg.sendMsg(logId, handError, retryInterceptor, webNotifySettingVo.getWebServer(), webNotifySettingVo.getWebParams(), webNotifySettingVo.getSecret(), webNotifySettingVo.getMethod(), smsVo, smsTemplate, regexReplace);
+                            SenderWebNotifyMsg.sendMsg(logId, handError, retryInterceptor, webNotifySettingVo.getWebServer(), webNotifySettingVo.getWebParams(), webNotifySettingVo.getSecret(), webNotifySettingVo.getMethod(), webNotifySettingVo.getHeaders(), smsVo, smsTemplate, regexReplace);
                         } catch (Exception e) {
                             LogUtil.updateLog(logId, 0, e.getMessage());
                             Log.e(TAG, "senderSendMsg: SenderWebNotifyMsg error " + e.getMessage());
