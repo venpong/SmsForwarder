@@ -335,6 +335,7 @@
                         android:id="@+id/editText_text_sms_hub_url"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        app:hint="http://xxx.com/send_api"
                         app:showEye="true" />
                 </LinearLayout>
 
@@ -508,6 +509,99 @@
                     android:scaleX="0.7"
                     android:scaleY="0.7"
                     android:text="@string/keep_reminding" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:background="@color/setting_bar_color"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="15dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="4"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/timing_report_battery_status"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/timing_report_battery_status_tips"
+                        android:textSize="9sp"
+                        tools:ignore="SmallSp" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_battery_cron"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/first_send_time"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <EditText
+                            android:id="@+id/et_battery_cron_start_time"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:autofillHints=""
+                            android:ems="5"
+                            android:focusable="false"
+                            android:maxLines="1"
+                            android:text=""
+                            android:textAlignment="center"
+                            android:textSize="12sp"
+                            tools:ignore="LabelFor,TextFields" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="@string/interval_minutes"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <EditText
+                            android:id="@+id/et_battery_cron_interval"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:autofillHints=""
+                            android:digits="0123456789"
+                            android:ems="4"
+                            android:inputType="number"
+                            android:maxLength="4"
+                            android:maxLines="1"
+                            android:text=""
+                            android:textAlignment="center"
+                            android:textSize="12sp"
+                            tools:ignore="LabelFor" />
+
+                    </LinearLayout>
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_battery_cron"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:textSize="16sp"
+                    tools:ignore="UseSwitchCompatOrMaterialXml" />
 
             </LinearLayout>
 

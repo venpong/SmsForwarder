@@ -5,7 +5,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -33,6 +32,7 @@ import com.hjq.permissions.XXPermissions;
 import com.hjq.toast.ToastUtils;
 import com.idormy.sms.forwarder.adapter.LogAdapter;
 import com.idormy.sms.forwarder.model.vo.LogVo;
+import com.idormy.sms.forwarder.sender.BatteryReportCronTask;
 import com.idormy.sms.forwarder.sender.HttpServer;
 import com.idormy.sms.forwarder.sender.SendUtil;
 import com.idormy.sms.forwarder.sender.SenderUtil;
@@ -59,6 +59,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("CommentedOutCode")
 public class MainActivity extends AppCompatActivity implements RefreshListView.IRefreshListener {
 
     private final String TAG = "MainActivity";
@@ -145,6 +146,15 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
                 SmsHubApiTask.updateTimer();
             } catch (Exception e) {
                 Log.e(TAG, "SmsHubApiTask:", e);
+            }
+        }
+
+        //电池状态定时推送
+        if (SettingUtil.getSwitchEnableBatteryCron()) {
+            try {
+                BatteryReportCronTask.getSingleton().updateTimer();
+            } catch (Exception e) {
+                Log.e(TAG, "BatteryReportCronTask:", e);
             }
         }
 
@@ -461,6 +471,8 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
             ToastUtils.show(R.string.delete_log_toast);
             dialog.dismiss();
         });
+        //取消
+        builder.setPositiveButton(R.string.cancel, (dialog, which) -> dialog.dismiss());
 
         //重发消息回调，重发失败也会触发
         Handler handler = new Handler(Looper.myLooper(), msg -> {
@@ -470,7 +482,7 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
         });
         //对于发送失败的消息添加重发按钮
         if (logVo.getForwardStatus() != 2) {
-            builder.setPositiveButton(R.string.resend, (dialog, which) -> {
+            builder.setNeutralButton(R.string.resend, (dialog, which) -> {
                 ToastUtils.show(R.string.resend_toast);
                 SendUtil.resendMsgByLog(MainActivity.this, handler, logVo);
                 dialog.dismiss();
@@ -511,8 +523,9 @@ public class MainActivity extends AppCompatActivity implements RefreshListView.I
                 intent = new Intent(this, AboutActivity.class);
                 break;
             case R.id.to_help:
-                Uri uri = Uri.parse("https://gitee.com/pp/SmsForwarder/wikis/pages");
-                intent = new Intent(Intent.ACTION_VIEW, uri);
+                //Uri uri = Uri.parse("https://gitee.com/pp/SmsForwarder/wikis/pages");
+                //intent = new Intent(Intent.ACTION_VIEW, uri);
+                intent = new Intent(this, HelpActivity.class);
                 break;
             default:
                 return super.onOptionsItemSelected(item);
