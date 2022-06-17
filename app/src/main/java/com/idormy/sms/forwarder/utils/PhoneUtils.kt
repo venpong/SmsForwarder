@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.provider.CallLog
 import android.provider.ContactsContract
 import android.provider.Settings
@@ -19,6 +18,7 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
+import com.idormy.sms.forwarder.App
 import com.idormy.sms.forwarder.R
 import com.idormy.sms.forwarder.core.Core
 import com.idormy.sms.forwarder.entity.CallInfo
@@ -31,7 +31,6 @@ import com.xuexiang.xutil.data.DateUtils
 import com.xuexiang.xutil.resource.ResUtils
 import java.text.SimpleDateFormat
 import java.util.*
-
 
 @Suppress("PropertyName")
 class PhoneUtils private constructor() {
@@ -86,6 +85,7 @@ class PhoneUtils private constructor() {
             } catch (e: java.lang.Exception) {
                 e.printStackTrace()
             }
+            Log.e(TAG, infoList.toString())
             return infoList
         }
 
@@ -172,41 +172,18 @@ class PhoneUtils private constructor() {
                 Log.d(TAG, "selection = $selection")
                 Log.d(TAG, "selectionArgs = $selectionArgs")
 
-                // 避免超过总数后循环取出
-                val cursorTotal = Core.app.contentResolver.query(
+                //为了兼容性这里全部取出后手动分页
+                val cursor = Core.app.contentResolver.query(
                     CallLog.Calls.CONTENT_URI,
                     null,
                     selection,
                     selectionArgs.toTypedArray(),
-                    CallLog.Calls.DEFAULT_SORT_ORDER
+                    CallLog.Calls.DEFAULT_SORT_ORDER // + " limit $limit offset $offset"
                 ) ?: return callInfoList
-                if (offset >= cursorTotal.count) return callInfoList
-
-                val cursor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Core.app.contentResolver.query(
-                        CallLog.Calls.CONTENT_URI,
-                        null,
-                        Bundle().apply {
-                            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
-                            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs.toTypedArray())
-                            putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(CallLog.Calls.DATE))
-                            putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
-                            putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
-                            putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
-                        },
-                        null)
-                } else {
-                    Core.app.contentResolver.query(
-                        CallLog.Calls.CONTENT_URI,
-                        null,
-                        selection,
-                        selectionArgs.toTypedArray(),
-                        CallLog.Calls.DEFAULT_SORT_ORDER + " limit $limit offset $offset"
-                    )
-                } ?: return callInfoList
-
                 Log.i(TAG, "cursor count:" + cursor.count)
-                if (cursor.count == 0) return callInfoList
+
+                // 避免超过总数后循环取出
+                if (cursor.count == 0 || offset >= cursor.count) return callInfoList
 
                 if (cursor.moveToFirst()) {
                     val indexName = cursor.getColumnIndex(CallLog.Calls.CACHED_NAME)
@@ -215,6 +192,7 @@ class PhoneUtils private constructor() {
                     val indexDuration = cursor.getColumnIndex(CallLog.Calls.DURATION)
                     val indexType = cursor.getColumnIndex(CallLog.Calls.TYPE)
                     val indexViaNumber = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && cursor.getColumnIndex("via_number") != -1) cursor.getColumnIndex("via_number") else -1
+                    val isSimId = false
                     var indexSimId = -1
                     if (cursor.getColumnIndex("simid") != -1) {
                         indexSimId = cursor.getColumnIndex("simid")
@@ -223,18 +201,27 @@ class PhoneUtils private constructor() {
                     ) {
                         indexSimId = cursor.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_ID)
                     }
+                    var curOffset = 0
                     do {
-                        val callInfo = CallInfo(
-                            cursor.getString(indexName) ?: "",  //姓名
-                            cursor.getString(indexNumber) ?: "",  //号码
-                            cursor.getLong(indexDate),  //获取通话日期
-                            cursor.getInt(indexDuration),  //获取通话时长，值为多少秒
-                            cursor.getInt(indexType),  //获取通话类型：1.呼入 2.呼出 3.未接
-                            if (indexViaNumber != -1) cursor.getString(indexViaNumber) else "",  //来源号码
-                            if (indexSimId != -1) cursor.getInt(indexSimId) else -1 //卡槽id
-                        )
-                        Log.d(TAG, callInfo.toString())
-                        callInfoList.add(callInfo)
+                        if (curOffset >= offset) {
+                            val callInfo = CallInfo(
+                                cursor.getString(indexName) ?: "",  //姓名
+                                cursor.getString(indexNumber) ?: "",  //号码
+                                cursor.getLong(indexDate),  //获取通话日期
+                                cursor.getInt(indexDuration),  //获取通话时长，值为多少秒
+                                cursor.getInt(indexType),  //获取通话类型：1.呼入 2.呼出 3.未接
+                                if (indexViaNumber != -1) cursor.getString(indexViaNumber) else "",  //来源号码
+                                if (indexSimId != -1) getSimId(cursor.getInt(indexSimId), isSimId) else -1 //卡槽id
+                            )
+                            Log.d(TAG, callInfo.toString())
+                            callInfoList.add(callInfo)
+                            if (limit == 1) {
+                                cursor.close()
+                                return callInfoList
+                            }
+                        }
+                        curOffset++
+                        if (curOffset >= offset + limit) break
                     } while (cursor.moveToNext())
                     if (!cursor.isClosed) cursor.close()
                 }
@@ -261,14 +248,6 @@ class PhoneUtils private constructor() {
                 var selection = "1=1"
                 val selectionArgs = ArrayList<String>()
                 if (!TextUtils.isEmpty(phoneNumber)) {
-                    /*selection += " and " + ContactsContract.CommonDataKinds.Phone.NUMBER + " in (?,?,?) "
-                    val phone1 = phoneNumber?.subSequence(0, 3).toString() + " " + phoneNumber?.substring(3, 7) +
-                            " " + phoneNumber?.substring(7)
-                    val phone2 = phoneNumber?.subSequence(0, 3).toString() + "-" + phoneNumber?.substring(3, 7) +
-                            "-" + phoneNumber?.substring(7)
-                    selectionArgs.add("%$phoneNumber%")
-                    selectionArgs.add("%$phone1%")
-                    selectionArgs.add("%$phone2%")*/
                     selection += " and replace(replace(" + ContactsContract.CommonDataKinds.Phone.NUMBER + ",' ',''),'-','') like ?"
                     selectionArgs.add("%$phoneNumber%")
                 }
@@ -279,41 +258,17 @@ class PhoneUtils private constructor() {
                 Log.d(TAG, "selection = $selection")
                 Log.d(TAG, "selectionArgs = $selectionArgs")
 
-                // 避免超过总数后循环取出
-                val cursorTotal = Core.app.contentResolver.query(
+                val cursor = Core.app.contentResolver.query(
                     ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                     null,
                     selection,
                     selectionArgs.toTypedArray(),
                     ContactsContract.CommonDataKinds.Phone.SORT_KEY_PRIMARY
                 ) ?: return contactInfoList
-                if (offset >= cursorTotal.count) return contactInfoList
-
-                val cursor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Core.app.contentResolver.query(
-                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                        null,
-                        Bundle().apply {
-                            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
-                            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs.toTypedArray())
-                            putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(ContactsContract.CommonDataKinds.Phone.SORT_KEY_PRIMARY))
-                            putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_ASCENDING)
-                            putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
-                            putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
-                        },
-                        null)
-                } else {
-                    Core.app.contentResolver.query(
-                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                        null,
-                        selection,
-                        selectionArgs.toTypedArray(),
-                        ContactsContract.CommonDataKinds.Phone.SORT_KEY_PRIMARY + " limit $limit offset $offset"
-                    )
-                } ?: return contactInfoList
-
                 Log.i(TAG, "cursor count:" + cursor.count)
-                if (cursor.count == 0) return contactInfoList
+
+                // 避免超过总数后循环取出
+                if (cursor.count == 0 || offset >= cursor.count) return contactInfoList
 
                 if (cursor.moveToFirst()) {
                     val displayNameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
@@ -325,6 +280,10 @@ class PhoneUtils private constructor() {
                         )
                         Log.d(TAG, contactInfo.toString())
                         contactInfoList.add(contactInfo)
+                        if (limit == 1) {
+                            cursor.close()
+                            return contactInfoList
+                        }
                     } while (cursor.moveToNext())
                     if (!cursor.isClosed) cursor.close()
                 }
@@ -360,7 +319,7 @@ class PhoneUtils private constructor() {
         }
 
         // 获取用户短信列表
-        fun getSmsList(type: Int, limit: Int, offset: Int, keyword: String): MutableList<SmsInfo> {
+        fun getSmsInfoList(type: Int, limit: Int, offset: Int, keyword: String): MutableList<SmsInfo> {
             val smsInfoList: MutableList<SmsInfo> = mutableListOf()
             try {
                 var selection = "1=1"
@@ -402,6 +361,7 @@ class PhoneUtils private constructor() {
                     val indexBody = cursor.getColumnIndex("body")
                     val indexDate = cursor.getColumnIndex("date")
                     val indexType = cursor.getColumnIndex("type")
+                    val isSimId = false
                     var indexSimId = -1
                     if (cursor.getColumnIndex("sim_id") != -1) {
                         indexSimId = cursor.getColumnIndex("sim_id")
@@ -421,7 +381,7 @@ class PhoneUtils private constructor() {
                         // 短信类型: 1=接收, 2=发送
                         smsInfo.type = cursor.getInt(indexType)
                         // 卡槽id
-                        smsInfo.simId = if (indexSimId != -1) cursor.getInt(indexSimId) else -1
+                        smsInfo.simId = if (indexSimId != -1) getSimId(cursor.getInt(indexSimId), isSimId) else -1
                         smsInfoList.add(smsInfo)
                     } while (cursor.moveToNext())
                     if (!cursor.isClosed) cursor.close()
@@ -450,6 +410,36 @@ class PhoneUtils private constructor() {
          */
         fun call(phoneNumber: String?) {
             XUtil.getContext().startActivity(IntentUtils.getCallIntent(phoneNumber, true))
+        }
+
+        /**
+         * 将 subscription_id 转成 卡槽ID： 0=Sim1, 1=Sim2, -1=获取失败
+         *
+         * TODO: 这里有坑，每个品牌定制系统的字段不太一样，不一定能获取到卡槽ID
+         * 测试通过：MIUI   测试失败：原生 Android 11（Google Pixel 2 XL）
+         *
+         * @param mId SubscriptionId
+         * @param isSimId 是否已经是SimId无需转换（待做机型兼容）
+         */
+        private fun getSimId(mId: Int, isSimId: Boolean): Int {
+            Log.i(TAG, "mId = $mId, isSimId = $isSimId")
+            if (isSimId) return mId
+
+            //获取卡槽信息
+            if (App.SimInfoList.isEmpty()) {
+                App.SimInfoList = getSimMultiInfo()
+            }
+            Log.i(TAG, "SimInfoList = " + App.SimInfoList.toString())
+
+            val simSlot = -1
+            if (App.SimInfoList.isEmpty()) return simSlot
+            for (simInfo in App.SimInfoList.values) {
+                if (simInfo.mSubscriptionId == mId && simInfo.mSimSlotIndex != -1) {
+                    Log.i(TAG, "simInfo = $simInfo")
+                    return simInfo.mSimSlotIndex
+                }
+            }
+            return simSlot
         }
 
     }

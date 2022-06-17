@@ -191,10 +191,23 @@ class RulesEditFragment : BaseFragment<FragmentRulesEditBinding?>(), View.OnClic
     }
 
     override fun onCheckedChanged(buttonView: CompoundButton?, isChecked: Boolean) {
-        val visibility = if (isChecked) View.VISIBLE else View.GONE
         when (buttonView?.id) {
-            R.id.sb_sms_template -> binding!!.layoutSmsTemplate.visibility = visibility
-            R.id.sb_regex_replace -> binding!!.layoutRegexReplace.visibility = visibility
+            R.id.sb_sms_template -> {
+                if (isChecked) {
+                    binding!!.layoutSmsTemplate.visibility = View.VISIBLE
+                } else {
+                    binding!!.layoutSmsTemplate.visibility = View.GONE
+                    binding!!.etSmsTemplate.setText("")
+                }
+            }
+            R.id.sb_regex_replace -> {
+                if (isChecked) {
+                    binding!!.layoutRegexReplace.visibility = View.VISIBLE
+                } else {
+                    binding!!.layoutRegexReplace.visibility = View.GONE
+                    binding!!.etRegexReplace.setText("")
+                }
+            }
             else -> {}
         }
     }
@@ -351,18 +364,47 @@ class RulesEditFragment : BaseFragment<FragmentRulesEditBinding?>(), View.OnClic
     private fun initAppSpinner() {
         if (ruleType != "app") return
 
+        //未开启异步获取已安装App信息开关时，规则编辑不显示已安装APP下拉框
+        if (!SettingUtils.enableLoadUserAppList && !SettingUtils.enableLoadSystemAppList) return
+
         val get = GlobalScope.async(Dispatchers.IO) {
-            App.AppInfoList = AppUtils.getAppsInfo()
+            if ((SettingUtils.enableLoadUserAppList && App.UserAppList.isEmpty())
+                || (SettingUtils.enableLoadSystemAppList && App.SystemAppList.isEmpty())
+            ) {
+                App.UserAppList.clear()
+                App.SystemAppList.clear()
+                val appInfoList = AppUtils.getAppsInfo()
+                for (appInfo in appInfoList) {
+                    if (appInfo.isSystem) {
+                        App.SystemAppList.add(appInfo)
+                    } else {
+                        App.UserAppList.add(appInfo)
+                    }
+                }
+                App.UserAppList.sortBy { appInfo -> appInfo.name }
+                App.SystemAppList.sortBy { appInfo -> appInfo.name }
+            }
         }
         GlobalScope.launch(Dispatchers.Main) {
             runCatching {
                 get.await()
-                if (App.AppInfoList.isEmpty()) return@runCatching
+                if (App.UserAppList.isEmpty() && App.SystemAppList.isEmpty()) return@runCatching
 
-                Log.e(TAG, App.AppInfoList.toString())
-                for (appInfo in App.AppInfoList) {
-                    appListSpinnerList.add(AppListAdapterItem(appInfo.name, appInfo.icon, appInfo.packageName))
+                appListSpinnerList.clear()
+                if (SettingUtils.enableLoadUserAppList) {
+                    for (appInfo in App.UserAppList) {
+                        appListSpinnerList.add(AppListAdapterItem(appInfo.name, appInfo.icon, appInfo.packageName))
+                    }
                 }
+                if (SettingUtils.enableLoadSystemAppList) {
+                    for (appInfo in App.SystemAppList) {
+                        appListSpinnerList.add(AppListAdapterItem(appInfo.name, appInfo.icon, appInfo.packageName))
+                    }
+                }
+
+                //列表为空也不显示下拉框
+                if (appListSpinnerList.isEmpty()) return@runCatching
+
                 appListSpinnerAdapter = AppListSpinnerAdapter(appListSpinnerList)
                     //.setTextColor(ResUtils.getColor(R.color.green))
                     //.setTextSize(12F)

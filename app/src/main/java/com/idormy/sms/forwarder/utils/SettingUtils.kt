@@ -85,6 +85,30 @@ class SettingUtils private constructor() {
                 MMKVUtils.put(SP_ENABLE_NOT_USER_PRESENT, enableNotUserPresent)
             }
 
+        //是否加载应用列表
+        @JvmStatic
+        var enableLoadAppList: Boolean
+            get() = MMKVUtils.getBoolean(ENABLE_LOAD_APP_LIST, false)
+            set(enableLoadAppList) {
+                MMKVUtils.put(ENABLE_LOAD_APP_LIST, enableLoadAppList)
+            }
+
+        //是否加载应用列表——用户应用
+        @JvmStatic
+        var enableLoadUserAppList: Boolean
+            get() = MMKVUtils.getBoolean(ENABLE_LOAD_USER_APP_LIST, false)
+            set(enableLoadUserAppList) {
+                MMKVUtils.put(ENABLE_LOAD_USER_APP_LIST, enableLoadUserAppList)
+            }
+
+        //是否加载应用列表——系统应用
+        @JvmStatic
+        var enableLoadSystemAppList: Boolean
+            get() = MMKVUtils.getBoolean(ENABLE_LOAD_SYSTEM_APP_LIST, false)
+            set(enableLoadSystemAppList) {
+                MMKVUtils.put(ENABLE_LOAD_SYSTEM_APP_LIST, enableLoadSystemAppList)
+            }
+
         //过滤多久内重复消息
         @JvmStatic
         var duplicateMessagesLimits: Int
@@ -173,6 +197,14 @@ class SettingUtils private constructor() {
                 MMKVUtils.put(SP_ENABLE_EXCLUDE_FROM_RECENTS, enableExcludeFromRecents)
             }
 
+        //是否转发应用通知
+        @JvmStatic
+        var enableCactus: Boolean
+            get() = MMKVUtils.getBoolean(SP_ENABLE_CACTUS, false)
+            set(enableAppNotify) {
+                MMKVUtils.put(SP_ENABLE_CACTUS, enableAppNotify)
+            }
+
         //是否播放静音音乐
         @JvmStatic
         var enablePlaySilenceMusic: Boolean
@@ -181,7 +213,7 @@ class SettingUtils private constructor() {
                 MMKVUtils.put(SP_ENABLE_PLAY_SILENCE_MUSIC, enablePlaySilenceMusic)
             }
 
-        //是否不在最近任务列表中显示
+        //是否启用1像素
         @JvmStatic
         var enableOnePixelActivity: Boolean
             get() = MMKVUtils.getBoolean(SP_ENABLE_ONE_PIXEL_ACTIVITY, false)

@@ -78,6 +78,8 @@ class SettingsFragment : BaseFragment<FragmentSettingsBinding?>(), View.OnClickL
         switchEnablePhone(binding!!.sbEnablePhone, binding!!.scbCallType1, binding!!.scbCallType2, binding!!.scbCallType3)
         //转发应用通知
         switchEnableAppNotify(binding!!.sbEnableAppNotify, binding!!.scbCancelAppNotify, binding!!.scbNotUserPresent)
+        //启动时异步获取已安装App信息
+        switchEnableLoadAppList(binding!!.sbEnableLoadAppList, binding!!.scbLoadUserApp, binding!!.scbLoadSystemApp)
         //过滤多久内重复消息
         binding!!.xsbDuplicateMessagesLimits.setDefaultValue(SettingUtils.duplicateMessagesLimits)
         binding!!.xsbDuplicateMessagesLimits.setOnSeekBarListener { _: XSeekBar?, newValue: Int ->
@@ -99,10 +101,9 @@ class SettingsFragment : BaseFragment<FragmentSettingsBinding?>(), View.OnClickL
         batterySetting(binding!!.layoutBatterySetting, binding!!.sbBatterySetting)
         //不在最近任务列表中显示
         switchExcludeFromRecents(binding!!.layoutExcludeFromRecents, binding!!.sbExcludeFromRecents)
-        //后台播放无声音乐
-        switchPlaySilenceMusic(binding!!.sbPlaySilenceMusic)
-        //1像素透明Activity保活(只有在android p以下可以使用)
-        switchOnePixelActivity(binding!!.sbOnePixelActivity)
+
+        //Cactus增强保活措施
+        switchEnableCactus(binding!!.sbEnableCactus, binding!!.scbPlaySilenceMusic, binding!!.scbOnePixelActivity)
 
         //接口请求失败重试时间间隔
         editRetryDelayTime(binding!!.etRetryTimes, binding!!.etDelayTime, binding!!.etTimeout)
@@ -369,6 +370,41 @@ class SettingsFragment : BaseFragment<FragmentSettingsBinding?>(), View.OnClickL
         }
     }
 
+    //启动时异步获取已安装App信息 (binding!!.sbEnableLoadAppList, binding!!.scbLoadUserApp, binding!!.scbLoadSystemApp)
+    @SuppressLint("UseSwitchCompatOrMaterialCode")
+    fun switchEnableLoadAppList(sbEnableLoadAppList: SwitchButton, scbLoadUserApp: SmoothCheckBox, scbLoadSystemApp: SmoothCheckBox) {
+        val isEnable: Boolean = SettingUtils.enableLoadAppList
+        sbEnableLoadAppList.isChecked = isEnable
+
+        sbEnableLoadAppList.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            if (isChecked && !SettingUtils.enableLoadUserAppList && !SettingUtils.enableLoadSystemAppList) {
+                sbEnableLoadAppList.isChecked = false
+                SettingUtils.enableLoadAppList = false
+                XToastUtils.error(getString(R.string.load_app_list_toast))
+                return@setOnCheckedChangeListener
+            }
+            SettingUtils.enableLoadAppList = isChecked
+        }
+        scbLoadUserApp.isChecked = SettingUtils.enableLoadUserAppList
+        scbLoadUserApp.setOnCheckedChangeListener { _: SmoothCheckBox, isChecked: Boolean ->
+            SettingUtils.enableLoadUserAppList = isChecked
+            if (SettingUtils.enableLoadAppList && !SettingUtils.enableLoadUserAppList && !SettingUtils.enableLoadSystemAppList) {
+                sbEnableLoadAppList.isChecked = false
+                SettingUtils.enableLoadAppList = false
+                XToastUtils.error(getString(R.string.load_app_list_toast))
+            }
+        }
+        scbLoadSystemApp.isChecked = SettingUtils.enableLoadSystemAppList
+        scbLoadSystemApp.setOnCheckedChangeListener { _: SmoothCheckBox, isChecked: Boolean ->
+            SettingUtils.enableLoadSystemAppList = isChecked
+            if (SettingUtils.enableLoadAppList && !SettingUtils.enableLoadUserAppList && !SettingUtils.enableLoadSystemAppList) {
+                sbEnableLoadAppList.isChecked = false
+                SettingUtils.enableLoadAppList = false
+                XToastUtils.error(getString(R.string.load_app_list_toast))
+            }
+        }
+    }
+
     //监听电池状态变化
     @SuppressLint("UseSwitchCompatOrMaterialCode")
     fun switchBatteryReceiver(sbBatteryReceiver: SwitchButton) {
@@ -525,25 +561,31 @@ class SettingsFragment : BaseFragment<FragmentSettingsBinding?>(), View.OnClickL
         }
     }
 
-    //后台播放无声音乐
-    @SuppressLint("ObsoleteSdkInt,UseSwitchCompatOrMaterialCode")
-    fun switchPlaySilenceMusic(sbPlaySilenceMusic: SwitchButton) {
-        sbPlaySilenceMusic.isChecked = SettingUtils.enablePlaySilenceMusic
-        sbPlaySilenceMusic.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+    //转发应用通知
+    @SuppressLint("UseSwitchCompatOrMaterialCode")
+    fun switchEnableCactus(sbEnableCactus: SwitchButton, scbPlaySilenceMusic: SmoothCheckBox, scbOnePixelActivity: SmoothCheckBox) {
+        val layoutCactusOptional: LinearLayout = binding!!.layoutCactusOptional
+        val isEnable: Boolean = SettingUtils.enableCactus
+        sbEnableCactus.isChecked = isEnable
+        layoutCactusOptional.visibility = if (isEnable) View.VISIBLE else View.GONE
+
+        sbEnableCactus.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+            layoutCactusOptional.visibility = if (isChecked) View.VISIBLE else View.GONE
+            SettingUtils.enableCactus = isChecked
+            XToastUtils.warning(getString(R.string.need_to_restart))
+        }
+
+        scbPlaySilenceMusic.isChecked = SettingUtils.enablePlaySilenceMusic
+        scbPlaySilenceMusic.setOnCheckedChangeListener { _: SmoothCheckBox, isChecked: Boolean ->
             SettingUtils.enablePlaySilenceMusic = isChecked
             XToastUtils.warning(getString(R.string.need_to_restart))
         }
-    }
 
-    //1像素透明Activity保活
-    @SuppressLint("ObsoleteSdkInt,UseSwitchCompatOrMaterialCode")
-    fun switchOnePixelActivity(sbOnePixelActivity: SwitchButton) {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             binding!!.layoutOnePixelActivity.visibility = View.VISIBLE
         }
-
-        sbOnePixelActivity.isChecked = SettingUtils.enableOnePixelActivity
-        sbOnePixelActivity.setOnCheckedChangeListener { _: CompoundButton?, isChecked: Boolean ->
+        scbOnePixelActivity.isChecked = SettingUtils.enableOnePixelActivity
+        scbOnePixelActivity.setOnCheckedChangeListener { _: SmoothCheckBox, isChecked: Boolean ->
             SettingUtils.enableOnePixelActivity = isChecked
             XToastUtils.warning(getString(R.string.need_to_restart))
         }

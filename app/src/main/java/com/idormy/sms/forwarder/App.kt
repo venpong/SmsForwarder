@@ -27,7 +27,6 @@ import com.idormy.sms.forwarder.service.BatteryService
 import com.idormy.sms.forwarder.service.ForegroundService
 import com.idormy.sms.forwarder.service.HttpService
 import com.idormy.sms.forwarder.utils.*
-import com.idormy.sms.forwarder.utils.sdkinit.ANRWatchDogInit
 import com.idormy.sms.forwarder.utils.sdkinit.UMengInit
 import com.idormy.sms.forwarder.utils.sdkinit.XBasicLibInit
 import com.idormy.sms.forwarder.utils.sdkinit.XUpdateInit
@@ -63,7 +62,8 @@ class App : Application(), CactusCallback, Configuration.Provider by Core {
         var SimInfoList: MutableMap<Int, SimInfo> = mutableMapOf()
 
         //已安装App信息
-        var AppInfoList: List<AppUtils.AppInfo> = arrayListOf()
+        var UserAppList: MutableList<AppUtils.AppInfo> = mutableListOf()
+        var SystemAppList: MutableList<AppUtils.AppInfo> = mutableListOf()
 
         /**
          * @return 当前app是否是调试开发模式
@@ -82,6 +82,8 @@ class App : Application(), CactusCallback, Configuration.Provider by Core {
 
         //Cactus运行状态
         val mStatus = MutableLiveData<Boolean>().apply { value = true }
+
+        var mDisposable: Disposable? = null
     }
 
     override fun attachBaseContext(base: Context) {
@@ -121,15 +123,30 @@ class App : Application(), CactusCallback, Configuration.Provider by Core {
             startService(batteryServiceIntent)
 
             //异步获取所有已安装 App 信息
-            val get = GlobalScope.async(Dispatchers.IO) {
-                AppInfoList = AppUtils.getAppsInfo()
-            }
-            GlobalScope.launch(Dispatchers.Main) {
-                runCatching {
-                    get.await()
-                    Log.d("GlobalScope", "AppUtils.getAppsInfo() Done")
-                }.onFailure {
-                    Log.e("GlobalScope", it.message.toString())
+            if (SettingUtils.enableLoadAppList) {
+                val enableLoadUserAppList = SettingUtils.enableLoadUserAppList
+                val enableLoadSystemAppList = SettingUtils.enableLoadSystemAppList
+                val get = GlobalScope.async(Dispatchers.IO) {
+                    val appInfoList = AppUtils.getAppsInfo()
+                    for (appInfo in appInfoList) {
+                        if (appInfo.isSystem && enableLoadSystemAppList) {
+                            SystemAppList.add(appInfo)
+                        } else if (enableLoadUserAppList) {
+                            UserAppList.add(appInfo)
+                        }
+                    }
+                    UserAppList.sortBy { appInfo -> appInfo.name }
+                    SystemAppList.sortBy { appInfo -> appInfo.name }
+                }
+                GlobalScope.launch(Dispatchers.Main) {
+                    runCatching {
+                        get.await()
+                        Log.d("GlobalScope", "AppUtils.getAppsInfo() Done")
+                        Log.d("GlobalScope", "UserAppList = $UserAppList")
+                        Log.d("GlobalScope", "SystemAppList = $SystemAppList")
+                    }.onFailure {
+                        Log.e("GlobalScope", it.message.toString())
+                    }
                 }
             }
 
@@ -139,7 +156,7 @@ class App : Application(), CactusCallback, Configuration.Provider by Core {
             }
 
             //Cactus 集成双进程前台服务，JobScheduler，onePix(一像素)，WorkManager，无声音乐
-            if (!isDebug) {
+            if (SettingUtils.enableCactus) {
                 //注册广播监听器
                 registerReceiver(CactusReceiver(), IntentFilter().apply {
                     addAction(Cactus.CACTUS_WORK)
@@ -205,11 +222,7 @@ class App : Application(), CactusCallback, Configuration.Provider by Core {
         XUpdateInit.init(this)
         // 运营统计数据
         UMengInit.init(this)
-        // ANR监控
-        ANRWatchDogInit.init()
     }
-
-    private var mDisposable: Disposable? = null
 
     @SuppressLint("CheckResult")
     override fun doWork(times: Int) {

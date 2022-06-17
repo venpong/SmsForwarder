@@ -34,6 +34,10 @@ const val SP_ENABLE_APP_NOTIFY = "enable_app_notify"
 const val SP_ENABLE_CANCEL_APP_NOTIFY = "enable_cancel_app_notify"
 const val SP_ENABLE_NOT_USER_PRESENT = "enable_not_user_present"
 
+const val ENABLE_LOAD_APP_LIST = "enable_load_app_list"
+const val ENABLE_LOAD_USER_APP_LIST = "enable_load_user_app_list"
+const val ENABLE_LOAD_SYSTEM_APP_LIST = "enable_load_system_app_list"
+
 const val SP_DUPLICATE_MESSAGES_LIMITS = "duplicate_messages_limits"
 
 const val SP_BATTERY_RECEIVER = "enable_battery_receiver"
@@ -65,6 +69,7 @@ const val SP_SMS_TEMPLATE = "sms_template"
 const val SP_ENABLE_HELP_TIP = "enable_help_tip"
 const val SP_PURE_CLIENT_MODE = "enable_pure_client_mode"
 
+const val SP_ENABLE_CACTUS = "enable_cactus"
 const val CACTUS_TIMER = "cactus_timer"
 const val CACTUS_LAST_TIMER = "cactus_last_timer"
 const val CACTUS_DATE = "cactus_date"
@@ -174,6 +179,7 @@ const val FRONT_CHANNEL_ID = "com.idormy.sms.forwarder"
 const val FRONT_CHANNEL_NAME = "SmsForwarder Foreground Service"
 
 //Frp内网穿透
+const val FRPC_LIB_DOWNLOAD_URL = "https://xupdate.ppps.cn/uploads/%s/%s/libgojni.so"
 const val FRPC_LIB_VERSION = "0.43.0"
 const val EVENT_FRPC_UPDATE_CONFIG = "EVENT_FRPC_UPDATE_CONFIG"
 const val EVENT_FRPC_DELETE_CONFIG = "EVENT_FRPC_DELETE_CONFIG"
@@ -208,7 +214,7 @@ const val EVENT_KEY_SIM_SLOT = "EVENT_KEY_SIM_SLOT"
 const val EVENT_KEY_PHONE_NUMBERS = "EVENT_KEY_PHONE_NUMBERS"
 
 //在线升级URL
-const val KEY_UPDATE_URL = "https://xupdate.bms.ink/update/checkVersion"
+const val KEY_UPDATE_URL = "https://xupdate.ppps.cn/update/checkVersion"
 
 //HttpServer相关
 const val ENABLE_HTTP_SERVER = "enable_http_server"
@@ -231,6 +237,7 @@ const val SP_ENABLE_API_CALL_QUERY = "enable_api_call_query"
 const val SP_ENABLE_API_CONTACT_QUERY = "enable_api_contact_query"
 const val SP_ENABLE_API_BATTERY_QUERY = "enable_api_battery_query"
 const val SP_SERVER_ADDRESS = "server_address"
+const val SP_SERVER_HISTORY = "server_history"
 const val SP_CLIENT_SIGN_KEY = "client_sign_key"
 var CLIENT_FRAGMENT_LIST = listOf(
     PageInfo(getString(R.string.api_clone), "com.idormy.sms.forwarder.fragment.client.CloneFragment", "{\"\":\"\"}", CoreAnim.slide, R.drawable.icon_api_clone),

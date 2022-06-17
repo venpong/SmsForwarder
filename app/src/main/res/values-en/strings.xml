@@ -35,6 +35,7 @@
     <string name="about_item_donation_link">Reward List</string>
     <string name="about_item_add_dingtalk_group">DingTalk Group</string>
     <string name="about_item_add_wework_group">Wework Group</string>
+    <string name="about_item_add_qq_channel">QQ Channel</string>
     <string name="about_item_add_qq_group">QQ Group</string>
     <string name="about_item_add_qq_group_1">①</string>
     <string name="about_item_add_qq_group_2">②</string>
@@ -52,6 +53,7 @@
     <string name="url_add_qq_group_5">https://qm.qq.com/cgi-bin/qm/qr?k=CcamLcA-QVN-KqCDjeMZqdTx8IGlJrVx</string>
     <string name="url_dingtalk_group">https://gitee.com/pp/SmsForwarder/raw/main/pic/dingtalk.png</string>
     <string name="url_wework_group">https://gitee.com/pp/SmsForwarder/raw/main/pic/qywechat.png</string>
+    <string name="url_qq_channel">https://qun.qq.com/qqweb/qunpro/share?_wv=3&amp;_wwv=128&amp;appChannel=share&amp;inviteCode=1W5aewP&amp;appChannel=share&amp;businessType=9&amp;from=246610&amp;biz=ka</string>
 
     <string name="lab_yes">Yes</string>
     <string name="lab_no">No</string>
@@ -169,6 +171,7 @@
     <string name="about">About</string>
     <string name="help">Help</string>
     <string name="clear_logs">Clear logs</string>
+    <string name="clear_history">Clear History</string>
     <string name="app_rule">App rule</string>
     <string name="call_rule">Call rule</string>
     <string name="sms_rule">Sms rule</string>
@@ -494,6 +497,7 @@
     <string name="received_call">Received</string>
     <string name="local_outgoing_call">Call out</string>
     <string name="optional_action">Optional: </string>
+    <string name="optional_type">Optional: </string>
     <string name="active_request">Active request</string>
     <string name="active_request_tips">Obtain instructions through passive reception or active polling to operate the machine</string>
     <string name="httpserver">Local HttpServer</string>
@@ -527,6 +531,7 @@
     <string name="tag_from">{{FROM}}</string>
     <string name="tag_sms">{{SMS}}</string>
     <string name="tag_package_name">{{PACKAGE_NAME}}</string>
+    <string name="tag_app_name">{{APP_NAME}}</string>
     <string name="tag_msg">{{MSG}}</string>
     <string name="tag_card_slot">{{CARD_SLOT}}</string>
     <string name="tag_receive_time">{{RECEIVE_TIME}}</string>
@@ -777,7 +782,7 @@
     <string name="phone_numbers">Phone Numbers</string>
     <string name="phone_numbers_hint">Required, separate multiple phone numbers with semicolons</string>
     <string name="phone_numbers_error">Invalid Phone Numbers, eg. 15888888888;19999999999</string>
-    <string name="phone_numbers_regex">^\\d{5,11}(;\\d{5,11})*$</string>
+    <string name="phone_numbers_regex">^\\d{5,20}(;\\d{5,20})*$</string>
     <string name="msg_content">Msg Content</string>
     <string name="msg_content_hint">Required, one entry within 70 characters, more than 70 characters, one entry for every additional 64 characters</string>
     <string name="msg_content_error">Msg Content cannot be empty, up to 390 characters (6 SMS)</string>
@@ -805,6 +810,7 @@
     <string name="battery_health">Health: %s</string>
     <string name="battery_plugged">Plugged: %s</string>
 
+    <string name="server_history">Server History</string>
     <string name="server_test">Server Test</string>
     <string name="invalid_service_address">Invalid service address\nFormat: http://127.0.0.1:5000 or https://smsf.demo.com</string>
     <string name="click_test_button_first">Click the test button first, to get the list of features enabled by the server</string>
@@ -856,4 +862,11 @@
     <string name="pure_client_mode_tips">When starting the APP, it will directly enter the active control client</string>
     <string name="exit_pure_client_mode">Exit pure client mode</string>
     <string name="enabling_pure_client_mode">Do you want to quit the app immediately and start it manually to take effect in pure client mode?</string>
+    <string name="optional_components">Optional:</string>
+    <string name="enable_cactus">Enable Cactus Keep Alive</string>
+    <string name="enabe_cactus_tips">Dual process foreground service/JobScheduler/WorkManager/1px/silent music</string>
+    <string name="load_app_list">Get installed app info async at startup</string>
+    <string name="load_app_list_tips">Used to speed up entering the application list/editing forwarding rules drop-down selection/replacement {{APP_NAME}}</string>
+    <string name="load_app_list_toast">A type must be selected when enabling asynchronous loading of the list of installed apps</string>
+    <string name="no_server_history">There is no history record, it will be added automatically after the interface test is passed</string>
 </resources>

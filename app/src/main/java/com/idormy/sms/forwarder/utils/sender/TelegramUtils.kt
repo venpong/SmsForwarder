@@ -4,15 +4,12 @@ import android.os.Looper
 import android.text.TextUtils
 import android.util.Log
 import com.google.gson.Gson
-import com.idormy.sms.forwarder.R
 import com.idormy.sms.forwarder.database.entity.Rule
 import com.idormy.sms.forwarder.entity.MsgInfo
 import com.idormy.sms.forwarder.entity.result.TelegramResult
 import com.idormy.sms.forwarder.entity.setting.TelegramSetting
 import com.idormy.sms.forwarder.utils.SendUtils
 import com.idormy.sms.forwarder.utils.SettingUtils
-import com.idormy.sms.forwarder.utils.XToastUtils
-import com.xuexiang.xui.utils.ResUtils
 import okhttp3.*
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -103,10 +100,10 @@ class TelegramUtils {
             client.newCall(request).enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
-                    SendUtils.updateLogs(logId, 0, e.message.toString())
                     e.printStackTrace()
                     Looper.prepare()
-                    XToastUtils.error("发送失败：" + e.message)
+                    SendUtils.updateLogs(logId, 0, e.message.toString())
+                    //XToastUtils.error("发送失败：" + e.message)
                     Looper.loop()
                 }
 
@@ -117,14 +114,14 @@ class TelegramUtils {
 
                     val resp = Gson().fromJson(responseStr, TelegramResult::class.java)
                     if (resp.ok == true) {
-                        SendUtils.updateLogs(logId, 2, responseStr.toString())
                         Looper.prepare()
-                        XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
+                        SendUtils.updateLogs(logId, 2, responseStr.toString())
+                        //XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
                         Looper.loop()
                     } else {
-                        SendUtils.updateLogs(logId, 0, responseStr.toString())
                         Looper.prepare()
-                        XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
+                        SendUtils.updateLogs(logId, 0, responseStr.toString())
+                        //XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
                         Looper.loop()
                     }
                 }

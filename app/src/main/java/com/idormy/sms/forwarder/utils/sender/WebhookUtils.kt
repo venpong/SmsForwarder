@@ -6,15 +6,12 @@ import android.text.TextUtils
 import android.util.Base64
 import android.util.Log
 import com.google.gson.Gson
-import com.idormy.sms.forwarder.R
 import com.idormy.sms.forwarder.database.entity.Rule
 import com.idormy.sms.forwarder.entity.MsgInfo
 import com.idormy.sms.forwarder.entity.setting.WebhookSetting
 import com.idormy.sms.forwarder.utils.CertUtils
 import com.idormy.sms.forwarder.utils.SendUtils
 import com.idormy.sms.forwarder.utils.SettingUtils
-import com.idormy.sms.forwarder.utils.XToastUtils
-import com.xuexiang.xui.utils.ResUtils
 import com.xuexiang.xutil.app.AppUtils
 import okhttp3.*
 import java.io.IOException
@@ -163,11 +160,11 @@ class WebhookUtils {
 
             client.newCall(requestBuilder.build()).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    SendUtils.updateLogs(logId, 0, e.message.toString())
-                    //LogUtils.updateLog(logId, 0, e.message)
                     //解决在子线程中调用Toast的异常情况处理
                     Looper.prepare()
-                    XToastUtils.error(ResUtils.getString(R.string.request_failed) + e.message)
+                    e.printStackTrace()
+                    SendUtils.updateLogs(logId, 0, e.message.toString())
+                    //XToastUtils.error(ResUtils.getString(R.string.request_failed) + e.message)
                     Looper.loop()
                 }
 
@@ -178,14 +175,14 @@ class WebhookUtils {
 
                     //返回http状态200即为成功
                     if (200 == response.code()) {
-                        SendUtils.updateLogs(logId, 2, responseStr)
                         Looper.prepare()
-                        XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
+                        SendUtils.updateLogs(logId, 2, responseStr)
+                        //XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
                         Looper.loop()
                     } else {
-                        SendUtils.updateLogs(logId, 0, responseStr)
                         Looper.prepare()
-                        XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
+                        SendUtils.updateLogs(logId, 0, responseStr)
+                        //XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
                         Looper.loop()
                     }
                 }
