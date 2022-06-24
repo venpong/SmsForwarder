@@ -685,7 +685,7 @@
     <string name="webhook_server">Webhook Server</string>
     <string name="webhook_server_tips">For example: https://a.b.com/msg?token=xyz</string>
     <string name="webhook_params">Params</string>
-    <string name="webhook_params_tips">For example: payload=%7B%22text%22%3A%22[msg]%22%7D [msg] will be replaced with SMS content.\nJson format is supported, for example: {text:[msg]}.\nNote: msg is automatically UTF-8 encoded except in JSON format</string>
+    <string name="webhook_params_tips">For example: payload=%7B%22text%22%3A%22[msg]%22%7D [msg] will be replaced with SMS content.\nJson format is supported, for example: {\"text\":\"[msg]\"}.\nNote: msg is automatically UTF-8 encoded except in JSON format</string>
     <string name="webhook_secret">Secret: If it is empty, the sign will not be calculated</string>
     <string name="headers">Headers</string>
     <string name="header_key">Key</string>
@@ -713,7 +713,7 @@
     <string name="no_sms_sending_permission">No SMS sending permission</string>
     <string name="frpclib_download_title">Missing FrpcLib v%s</string>
     <string name="frpclib_download_content">Downloading, please wait…</string>
-    <string name="frpclib_version_mismatch">FrpcLib version mismatch, download again</string>
+    <string name="frpclib_version_mismatch">FrpcLib version mismatch</string>
     <string name="page_not_found">Page not found!</string>
     <string name="data_error">Data error!</string>
     <string name="cannot_open_with_browser">Can\'t open with browser</string>
@@ -869,4 +869,8 @@
     <string name="load_app_list_tips">Used to speed up entering the application list/editing forwarding rules drop-down selection/replacement {{APP_NAME}}</string>
     <string name="load_app_list_toast">A type must be selected when enabling asynchronous loading of the list of installed apps</string>
     <string name="no_server_history">There is no history record, it will be added automatically after the interface test is passed</string>
+    <string name="select_time_period">Select Time Period</string>
+    <string name="silent_time_period">Silent (disable forwarding) time period</string>
+    <string name="silent_time_period_tips">If the end time is less than the start time, it will span days; if it is equal, it will be disabled</string>
+    <string name="download_frpc_tips">Do you want to download and restart to load!</string>
 </resources>

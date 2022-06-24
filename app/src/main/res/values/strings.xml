@@ -686,7 +686,7 @@
     <string name="webhook_server">Webhook Server</string>
     <string name="webhook_server_tips">例如：https://a.b.com/msg?token=xyz</string>
     <string name="webhook_params">Params</string>
-    <string name="webhook_params_tips">例如：payload=%7B%22text%22%3A%22[msg]%22%7D [msg]将被替换成短信内容。\n支持Json格式，例如：{"text":[msg]}。\n注意：除JSON格式外，msg会自动进行UTF-8编码</string>
+    <string name="webhook_params_tips">例如：payload=%7B%22text%22%3A%22[msg]%22%7D [msg]将被替换成短信内容。\n支持Json格式，例如：{\"text\":\"[msg]\"}。\n注意：除JSON格式外，msg会自动进行UTF-8编码</string>
     <string name="webhook_secret">Secret：置空则不计算sign</string>
     <string name="headers">Headers</string>
     <string name="header_key">Key</string>
@@ -714,7 +714,7 @@
     <string name="no_sms_sending_permission">没有短信发送权限</string>
     <string name="frpclib_download_title">缺少 FrpcLib v%s 动态库</string>
     <string name="frpclib_download_content">正在下载中，请稍后……</string>
-    <string name="frpclib_version_mismatch">FrpcLib 版本不匹配，重新下载</string>
+    <string name="frpclib_version_mismatch">FrpcLib 版本不匹配</string>
     <string name="page_not_found">页面未找到！</string>
     <string name="data_error">数据出错！</string>
     <string name="cannot_open_with_browser">Can\'t open with browser</string>
@@ -870,4 +870,8 @@
     <string name="load_app_list_tips">用于加速进入应用列表/编辑转发规则下拉选择/替换{{APP名称}}</string>
     <string name="load_app_list_toast">开启异步获取已安装App列表时必选一个类型</string>
     <string name="no_server_history">暂无历史记录，接口测试通过后自动加入</string>
+    <string name="select_time_period">时间段选择</string>
+    <string name="silent_time_period">免打扰(禁用转发)时间段</string>
+    <string name="silent_time_period_tips">结束时间小于开始时间则跨天；相等则禁用</string>
+    <string name="download_frpc_tips">是否立即下载，并重启加载？</string>
 </resources>
