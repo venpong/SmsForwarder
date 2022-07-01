@@ -114,14 +114,25 @@ class EmailUtils {
                 else -> {}
             }
 
-            // 创建邮箱
+            //收件地址
+            val toAddressList = ArrayList<String>()
+            val emailArray = setting.toEmail.toString().split("[,，;；]".toRegex())
+            if (emailArray.isNotEmpty()) {
+                for (email in emailArray) {
+                    toAddressList.add(email)
+                }
+            } else {
+                toAddressList.add(setting.toEmail.toString())
+            }
+
+            //创建邮箱
             val mail = Mail().apply {
                 mailServerHost = setting.host.toString()
                 mailServerPort = setting.port.toString()
                 fromAddress = setting.fromEmail.toString()
                 fromNickname = msgInfo.getTitleForSend(setting.nickname.toString())
                 password = setting.pwd.toString()
-                toAddress = arrayListOf(setting.toEmail.toString())
+                toAddress = toAddressList
                 subject = title
                 content = message
                 openSSL = setting.ssl == true
@@ -130,14 +141,12 @@ class EmailUtils {
 
             MailSender.getInstance().sendMail(mail, object : MailSender.OnMailSendListener {
                 override fun onError(e: Throwable) {
-                    SendUtils.updateLogs(logId, 0, e.message.toString())
                     Log.e("MailSender", e.message.toString())
-                    //XToastUtils.error(ResUtils.getString(R.string.request_failed) + e.message.toString())
+                    SendUtils.updateLogs(logId, 0, e.message.toString())
                 }
 
                 override fun onSuccess() {
                     SendUtils.updateLogs(logId, 2, ResUtils.getString(R.string.request_succeeded))
-                    //XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
                 }
             })
 
