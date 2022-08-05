@@ -67,6 +67,9 @@
 > ⚠ GitHub Wiki：https://github.com/pppscn/SmsForwarder/wiki
 
 > ⚠ Gitee Wiki：https://gitee.com/pp/SmsForwarder/wikis/pages
+
+![使用流程与问题排查流程](https://images.gitee.com/uploads/images/2022/0730/214314_b2389eae_16273.png "SmsForwarder 使用流程与问题排查流程.png")
+
 --------
 
 ## 反馈与建议：
