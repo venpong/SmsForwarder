@@ -40,6 +40,14 @@ class HttpServerUtils private constructor() {
                 MMKVUtils.put(SP_SERVER_SIGN_KEY, serverSignKey)
             }
 
+        //自定义web客户端目录
+        @JvmStatic
+        var serverWebPath: String?
+            get() = MMKVUtils.getString(SP_SERVER_WEB_PATH, "")
+            set(serverWebPath) {
+                MMKVUtils.put(SP_SERVER_WEB_PATH, serverWebPath)
+            }
+
         //服务地址
         @JvmStatic
         var serverAddress: String?
@@ -54,6 +62,14 @@ class HttpServerUtils private constructor() {
             get() = MMKVUtils.getString(SP_SERVER_HISTORY, "")
             set(serverHistory) {
                 MMKVUtils.put(SP_SERVER_HISTORY, serverHistory)
+            }
+
+        //服务端配置
+        @JvmStatic
+        var serverConfig: String?
+            get() = MMKVUtils.getString(SP_SERVER_CONFIG, "")
+            set(serverConfig) {
+                MMKVUtils.put(SP_SERVER_CONFIG, serverConfig)
             }
 
         //客户端签名密钥

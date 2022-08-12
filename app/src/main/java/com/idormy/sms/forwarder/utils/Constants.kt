@@ -235,6 +235,7 @@ const val HTTP_FAILURE_CODE: Int = 500
 const val SP_ENABLE_SERVER = "enable_server"
 const val SP_ENABLE_SERVER_AUTORUN = "enable_server_autorun"
 const val SP_SERVER_SIGN_KEY = "server_sign_key"
+const val SP_SERVER_WEB_PATH = "server_web_path"
 const val SP_ENABLE_API_CLONE = "enable_api_clone"
 const val SP_ENABLE_API_SMS_SEND = "enable_api_sms_send"
 const val SP_ENABLE_API_SMS_QUERY = "enable_api_sms_query"
@@ -245,6 +246,7 @@ const val SP_ENABLE_API_WOL = "enable_api_wol"
 const val SP_WOL_HISTORY = "wol_history"
 const val SP_SERVER_ADDRESS = "server_address"
 const val SP_SERVER_HISTORY = "server_history"
+const val SP_SERVER_CONFIG = "server_config"
 const val SP_CLIENT_SIGN_KEY = "client_sign_key"
 var CLIENT_FRAGMENT_LIST = listOf(
     PageInfo(getString(R.string.api_clone), "com.idormy.sms.forwarder.fragment.client.CloneFragment", "{\"\":\"\"}", CoreAnim.slide, R.drawable.icon_api_clone),
