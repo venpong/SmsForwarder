@@ -2,8 +2,8 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 def build_versions = [:]
-build_versions.version_code = 46
-build_versions.version_name = "3.0.8"
+build_versions.version_code = 47
+build_versions.version_name = "3.0.9"
 build_versions.min_sdk = 19
 build_versions.target_sdk = 32
 build_versions.build_tools = "32.0.0"
@@ -190,12 +190,16 @@ ext.isRelease = this.&isRelease
 //默认添加代码仓库路径
 static def addRepos(RepositoryHandler handler) {
     handler.mavenLocal()
-    handler.google { url 'https://maven.aliyun.com/repository/google' }
-    handler.mavenCentral { url 'https://maven.aliyun.com/repository/central' }
-    handler.maven { url "https://jitpack.io" }
+    //handler.google { url 'https://maven.aliyun.com/repository/google' }
+    //handler.mavenCentral { url 'https://maven.aliyun.com/repository/central' }
+    handler.google()
+    handler.mavenCentral()
+    handler.maven { url 'https://maven.aliyun.com/repository/google' }
+    handler.maven { url 'https://maven.aliyun.com/repository/central' }
     handler.maven { url 'https://maven.aliyun.com/repository/public' }
     handler.maven { url "https://repo1.maven.org/maven2/" }
     handler.maven { url 'https://oss.sonatype.org/content/repositories/public' }
+    handler.maven { url "https://jitpack.io" }
     //Add the Local repository
     handler.maven { url 'LocalRepository' }
 }
