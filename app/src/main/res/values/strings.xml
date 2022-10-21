@@ -781,6 +781,8 @@
     <string name="copy" tools:ignore="PrivateResource">复制</string>
     <string name="random">随机生成</string>
     <string name="sign_key">签名密钥</string>
+    <string name="rsa_key_tips">已生成公私钥对，并复制公钥到剪贴板</string>
+    <string name="rsa_key_tips2">已复制公钥到剪贴板</string>
     <string name="sign_key_tips">已生成密钥，并复制到剪贴板</string>
     <string name="enable_function">启用功能</string>
     <string name="enable_function_tips">按需选择您要启用远程控制的功能</string>
@@ -803,7 +805,7 @@
     <string name="phone_numbers">手机号码</string>
     <string name="phone_numbers_hint">必填，多个手机号用半角分号分隔</string>
     <string name="phone_numbers_error">手机号码格式错误，例：15888888888;19999999999</string>
-    <string name="phone_numbers_regex">^\\d{5,20}(;\\d{5,20})*$</string>
+    <string name="phone_numbers_regex">^([+]?\\d{5,20})(;[+]?\\d{5,20})*$</string>
     <string name="msg_content">短信内容</string>
     <string name="msg_content_hint">必填，70个字符内算一条，超过70个字符，每增加64字符累加1条</string>
     <string name="msg_content_error">短信内容不能为空，最多390字符（6条短信）</string>
@@ -832,9 +834,9 @@
     <string name="battery_plugged">充电器：%s</string>
 
     <string name="server_history">历史记录</string>
-    <string name="server_test">测试接口</string>
+    <string name="server_test">登录服务</string>
     <string name="invalid_service_address">无效的服务地址！\n格式：http://127.0.0.1:5000 或 https://smsf.demo.com</string>
-    <string name="click_test_button_first">请先点击【测试接口】按钮，获取服务端已启用的功能列表</string>
+    <string name="click_test_button_first">请先点击【登录服务】按钮，获取服务端已启用的功能列表</string>
     <string name="disabled_on_the_server">服务端禁用此功能</string>
     <string name="frpc_failed_to_run">Frpc运行失败</string>
     <string name="successfully_deleted">删除成功</string>
@@ -868,14 +870,14 @@
     <string name="sign_verify_failed">签名校验失败</string>
     <string name="version_code_required">version_code节点必传</string>
     <string name="inconsistent_version">客户端与服务端的App版本不一致</string>
-    <string name="timestamp_verify_failed" formatted="false">timestamp校验失败，与服务器时间(%s)误差不能超过1小时(diffTime=%s)</string>
+    <string name="timestamp_verify_failed" formatted="false">timestamp校验失败，与服务器时间(%s)误差不能超过%s秒(diffTime=%s)</string>
 
     <string name="main_title">主标题</string>
     <string name="subtitle">副标题</string>
     <string name="sms_keyword_hint">输入关键字模糊匹配短信内容</string>
     <string name="contact_keyword_hint">纯数字匹配号码/非数字匹配姓名</string>
     <string name="call_keyword_hint">输入关键字模糊匹配手机号码</string>
-    <string name="server_settings_tips2">按照主动控制·服务端的配置填写以下两项，签名密钥可选</string>
+    <string name="server_settings_tips2">按照主动控制·服务端的配置填写以下项目</string>
     <string name="service_address">服务地址</string>
     <string name="service_address_hint">例如：http://127.0.0.1:5000</string>
     <string name="features_list">功能列表</string>
@@ -923,4 +925,21 @@
     <string name="auto_clean_logs">自动删除N天前的转发记录</string>
     <string name="auto_clean_logs_tips">0=禁用，触发机制：每次电量变化时扫描</string>
     <string name="day">天</string>
+    <string name="safety_measures">安全措施</string>
+    <string name="safety_measures_tips">客户端与服务端必须一致，强烈建议公网访问时启用加密</string>
+    <string name="safety_measures_none">不需要</string>
+    <string name="safety_measures_sign">校验签名</string>
+    <string name="safety_measures_rsa">RSA加密</string>
+    <string name="safety_measures_sm4">SM4加密</string>
+    <string name="web_path_tips">参见 Github Wiki，下载到 Download 目录</string>
+    <string name="time_tolerance">客户端与服务端时间容差</string>
+    <string name="time_tolerance_tips">尽量缩短时间容差，避免请求重放攻击</string>
+    <string name="private_key">RSA私钥</string>
+    <string name="private_key_tips">RSA私钥用在服务端：服务端应答报文私钥加密，客户端公钥解密</string>
+    <string name="generate_key">生成密钥</string>
+    <string name="public_key">RSA公钥</string>
+    <string name="public_key_tips">RSA公钥用在客户端：客户端请求报文公钥加密，服务端私钥解密</string>
+    <string name="copy_public_key">复制公钥</string>
+    <string name="sm4_key">SM4密钥</string>
+    <string name="sm4_key_tips">客户端/服务端交互采用SM4加解密</string>
 </resources>

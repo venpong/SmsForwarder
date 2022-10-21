@@ -36,6 +36,7 @@ import com.xuexiang.xui.utils.ResUtils
 import com.xuexiang.xui.utils.SnackbarUtils
 import com.xuexiang.xui.widget.actionbar.TitleBar
 import com.xuexiang.xui.widget.searchview.MaterialSearchView
+import com.xuexiang.xutil.data.ConvertTools
 import com.xuexiang.xutil.system.ClipboardUtils
 import me.samlss.broccoli.Broccoli
 
@@ -190,43 +191,82 @@ class ContactQueryFragment : BaseFragment<FragmentClientContactQueryBinding?>() 
         else
             ContactQueryData(1, 20, null, keyword)
 
-        val requestMsg: String = Gson().toJson(msgMap)
+        var requestMsg: String = Gson().toJson(msgMap)
         Log.i(TAG, "requestMsg:$requestMsg")
 
-        XHttp.post(requestUrl)
-            .upJson(requestMsg)
+        val postRequest = XHttp.post(requestUrl)
             .keepJson(true)
             .timeOut((SettingUtils.requestTimeout * 1000).toLong()) //超时时间10s
             .cacheMode(CacheMode.NO_CACHE)
-            //.retryCount(SettingUtils.requestRetryTimes) //超时重试的次数
-            //.retryDelay(SettingUtils.requestDelayTime) //超时重试的延迟时间
-            //.retryIncreaseDelay(SettingUtils.requestDelayTime) //超时重试叠加延时
             .timeStamp(true)
-            .execute(object : SimpleCallBack<String>() {
 
-                override fun onError(e: ApiException) {
-                    XToastUtils.error(e.displayMessage)
+        when (HttpServerUtils.clientSafetyMeasures) {
+            2 -> {
+                val publicKey = RSACrypt.getPublicKey(HttpServerUtils.clientSignKey.toString())
+                try {
+                    requestMsg = Base64.encode(requestMsg.toByteArray())
+                    requestMsg = RSACrypt.encryptByPublicKey(requestMsg, publicKey)
+                    Log.i(TAG, "requestMsg: $requestMsg")
+                } catch (e: Exception) {
+                    XToastUtils.error(ResUtils.getString(R.string.request_failed) + e.message)
+                    e.printStackTrace()
+                    return
                 }
+                postRequest.upString(requestMsg)
+            }
+            3 -> {
+                try {
+                    val sm4Key = ConvertTools.hexStringToByteArray(HttpServerUtils.clientSignKey.toString())
+                    //requestMsg = Base64.encode(requestMsg.toByteArray())
+                    val encryptCBC = SM4Crypt.encrypt(requestMsg.toByteArray(), sm4Key)
+                    requestMsg = ConvertTools.bytes2HexString(encryptCBC)
+                    Log.i(TAG, "requestMsg: $requestMsg")
+                } catch (e: Exception) {
+                    XToastUtils.error(ResUtils.getString(R.string.request_failed) + e.message)
+                    e.printStackTrace()
+                    return
+                }
+                postRequest.upString(requestMsg)
+            }
+            else -> {
+                postRequest.upJson(requestMsg)
+            }
+        }
 
-                override fun onSuccess(response: String) {
-                    Log.i(TAG, response)
-                    try {
-                        val resp: BaseResponse<List<ContactInfo>?> = Gson().fromJson(response, object : TypeToken<BaseResponse<List<ContactInfo>?>>() {}.type)
-                        if (resp.code == 200) {
-                            //XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
-                            mAdapter!!.refresh(resp.data)
-                            binding!!.refreshLayout.finishRefresh()
-                            binding!!.recyclerView.scrollToPosition(0)
-                        } else {
-                            XToastUtils.error(ResUtils.getString(R.string.request_failed) + resp.msg)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
+        postRequest.execute(object : SimpleCallBack<String>() {
+            override fun onError(e: ApiException) {
+                XToastUtils.error(e.displayMessage)
+            }
+
+            override fun onSuccess(response: String) {
+                Log.i(TAG, response)
+                try {
+                    var json = response
+                    if (HttpServerUtils.clientSafetyMeasures == 2) {
+                        val publicKey = RSACrypt.getPublicKey(HttpServerUtils.clientSignKey.toString())
+                        json = RSACrypt.decryptByPublicKey(json, publicKey)
+                        json = String(Base64.decode(json))
+                    } else if (HttpServerUtils.clientSafetyMeasures == 3) {
+                        val sm4Key = ConvertTools.hexStringToByteArray(HttpServerUtils.clientSignKey.toString())
+                        val encryptCBC = ConvertTools.hexStringToByteArray(json)
+                        val decryptCBC = SM4Crypt.decrypt(encryptCBC, sm4Key)
+                        json = String(decryptCBC)
                     }
+                    val resp: BaseResponse<List<ContactInfo>?> = Gson().fromJson(json, object : TypeToken<BaseResponse<List<ContactInfo>?>>() {}.type)
+                    if (resp.code == 200) {
+                        //XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
+                        mAdapter!!.refresh(resp.data)
+                        binding!!.refreshLayout.finishRefresh()
+                        binding!!.recyclerView.scrollToPosition(0)
+                    } else {
+                        XToastUtils.error(ResUtils.getString(R.string.request_failed) + resp.msg)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
                 }
-
-            })
+            }
+        })
 
     }
 

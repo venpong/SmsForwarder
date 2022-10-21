@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.RadioGroup
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.idormy.sms.forwarder.App
@@ -35,12 +36,12 @@ import com.xuexiang.xui.widget.actionbar.TitleBar
 import com.xuexiang.xui.widget.dialog.materialdialog.DialogAction
 import com.xuexiang.xui.widget.dialog.materialdialog.MaterialDialog
 import com.xuexiang.xutil.XUtil
+import com.xuexiang.xutil.data.ConvertTools
+
 
 @Suppress("PrivatePropertyName", "PropertyName")
 @Page(name = "主动控制·客户端")
-class ClientFragment : BaseFragment<FragmentClientBinding?>(),
-    View.OnClickListener,
-    RecyclerViewHolder.OnItemClickListener<PageInfo> {
+class ClientFragment : BaseFragment<FragmentClientBinding?>(), View.OnClickListener, RecyclerViewHolder.OnItemClickListener<PageInfo> {
 
     val TAG: String = ClientFragment::class.java.simpleName
     private var appContext: App? = null
@@ -113,6 +114,49 @@ class ClientFragment : BaseFragment<FragmentClientBinding?>(),
             }
         })
 
+        //安全措施
+        var safetyMeasuresId = R.id.rb_safety_measures_none
+        when (HttpServerUtils.clientSafetyMeasures) {
+            1 -> {
+                safetyMeasuresId = R.id.rb_safety_measures_sign
+                binding!!.tvSignKey.text = getString(R.string.sign_key)
+            }
+            2 -> {
+                safetyMeasuresId = R.id.rb_safety_measures_rsa
+                binding!!.tvSignKey.text = getString(R.string.public_key)
+            }
+            3 -> {
+                safetyMeasuresId = R.id.rb_safety_measures_sm4
+                binding!!.tvSignKey.text = getString(R.string.sm4_key)
+            }
+            else -> {
+                binding!!.layoutSignKey.visibility = View.GONE
+            }
+        }
+        binding!!.rgSafetyMeasures.check(safetyMeasuresId)
+        binding!!.rgSafetyMeasures.setOnCheckedChangeListener { _: RadioGroup?, checkedId: Int ->
+            var safetyMeasures = 0
+            binding!!.layoutSignKey.visibility = View.VISIBLE
+            when (checkedId) {
+                R.id.rb_safety_measures_sign -> {
+                    safetyMeasures = 1
+                    binding!!.tvSignKey.text = getString(R.string.sign_key)
+                }
+                R.id.rb_safety_measures_rsa -> {
+                    safetyMeasures = 2
+                    binding!!.tvSignKey.text = getString(R.string.public_key)
+                }
+                R.id.rb_safety_measures_sm4 -> {
+                    safetyMeasures = 3
+                    binding!!.tvSignKey.text = getString(R.string.sm4_key)
+                }
+                else -> {
+                    binding!!.layoutSignKey.visibility = View.GONE
+                }
+            }
+            HttpServerUtils.clientSafetyMeasures = safetyMeasures
+        }
+
         binding!!.etSignKey.setText(HttpServerUtils.clientSignKey)
         binding!!.etSignKey.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
@@ -136,30 +180,50 @@ class ClientFragment : BaseFragment<FragmentClientBinding?>(),
                 }
                 Log.d(TAG, "serverHistory = $serverHistory")
 
-                MaterialDialog.Builder(requireContext())
-                    .title(R.string.server_history)
-                    .items(serverHistory.keys)
-                    .itemsCallbackSingleChoice(0) { _: MaterialDialog?, _: View?, _: Int, text: CharSequence ->
-                        //XToastUtils.info("$which: $text")
-                        val matches = Regex("【(.*)】(.*)", RegexOption.IGNORE_CASE).findAll(text).toList().flatMap(MatchResult::groupValues)
-                        Log.i(TAG, "matches = $matches")
-                        if (matches.isNotEmpty()) {
-                            binding!!.etServerAddress.setText(matches[2])
+                MaterialDialog.Builder(requireContext()).title(R.string.server_history).items(serverHistory.keys).itemsCallbackSingleChoice(0) { _: MaterialDialog?, _: View?, _: Int, text: CharSequence ->
+                    //XToastUtils.info("$which: $text")
+                    val matches = Regex("【(.*)】(.*)", RegexOption.IGNORE_CASE).findAll(text).toList().flatMap(MatchResult::groupValues)
+                    Log.i(TAG, "matches = $matches")
+                    if (matches.isNotEmpty()) {
+                        binding!!.etServerAddress.setText(matches[2])
+                    } else {
+                        binding!!.etServerAddress.setText(text)
+                    }
+                    val signKey = serverHistory[text].toString()
+                    if (!TextUtils.isEmpty(signKey)) {
+                        val keyMatches = Regex("(.*)##(.*)", RegexOption.IGNORE_CASE).findAll(signKey).toList().flatMap(MatchResult::groupValues)
+                        Log.i(TAG, "keyMatches = $keyMatches")
+                        if (keyMatches.isNotEmpty()) {
+                            binding!!.etSignKey.setText(keyMatches[1])
+                            var safetyMeasuresId = R.id.rb_safety_measures_none
+                            when (keyMatches[2]) {
+                                "1" -> {
+                                    safetyMeasuresId = R.id.rb_safety_measures_sign
+                                    binding!!.tvSignKey.text = getString(R.string.sign_key)
+                                }
+                                "2" -> {
+                                    safetyMeasuresId = R.id.rb_safety_measures_rsa
+                                    binding!!.tvSignKey.text = getString(R.string.public_key)
+                                }
+                                "3" -> {
+                                    safetyMeasuresId = R.id.rb_safety_measures_sm4
+                                    binding!!.tvSignKey.text = getString(R.string.sm4_key)
+                                }
+                                else -> {
+                                    binding!!.tvSignKey.visibility = View.GONE
+                                    binding!!.etSignKey.visibility = View.GONE
+                                }
+                            }
+                            binding!!.rgSafetyMeasures.check(safetyMeasuresId)
                         } else {
-                            binding!!.etServerAddress.setText(text)
+                            binding!!.etSignKey.setText(serverHistory[text])
                         }
-                        binding!!.etSignKey.setText(serverHistory[text])
-                        true // allow selection
                     }
-                    .positiveText(R.string.select)
-                    .negativeText(R.string.cancel)
-                    .neutralText(R.string.clear_history)
-                    .neutralColor(ResUtils.getColors(R.color.red))
-                    .onNeutral { _: MaterialDialog?, _: DialogAction? ->
-                        serverHistory.clear()
-                        HttpServerUtils.serverHistory = ""
-                    }
-                    .show()
+                    true // allow selection
+                }.positiveText(R.string.select).negativeText(R.string.cancel).neutralText(R.string.clear_history).neutralColor(ResUtils.getColors(R.color.red)).onNeutral { _: MaterialDialog?, _: DialogAction? ->
+                    serverHistory.clear()
+                    HttpServerUtils.serverHistory = ""
+                }.show()
             }
             R.id.btn_server_test -> {
                 if (!CommonUtils.checkUrl(HttpServerUtils.serverAddress)) {
@@ -183,22 +247,12 @@ class ClientFragment : BaseFragment<FragmentClientBinding?>(),
                 XToastUtils.error(getString(R.string.click_test_button_first))
                 return
             }
-            if (serverConfig != null && (
-                        (item.name == ResUtils.getString(R.string.api_sms_send) && !serverConfig!!.enableApiSmsSend)
-                                || (item.name == ResUtils.getString(R.string.api_sms_query) && !serverConfig!!.enableApiSmsQuery)
-                                || (item.name == ResUtils.getString(R.string.api_call_query) && !serverConfig!!.enableApiCallQuery)
-                                || (item.name == ResUtils.getString(R.string.api_contact_query) && !serverConfig!!.enableApiContactQuery)
-                                || (item.name == ResUtils.getString(R.string.api_battery_query) && !serverConfig!!.enableApiBatteryQuery)
-                                || (item.name == ResUtils.getString(R.string.api_wol) && !serverConfig!!.enableApiWol)
-                        )
-            ) {
+            if (serverConfig != null && ((item.name == ResUtils.getString(R.string.api_sms_send) && !serverConfig!!.enableApiSmsSend) || (item.name == ResUtils.getString(R.string.api_sms_query) && !serverConfig!!.enableApiSmsQuery) || (item.name == ResUtils.getString(R.string.api_call_query) && !serverConfig!!.enableApiCallQuery) || (item.name == ResUtils.getString(R.string.api_contact_query) && !serverConfig!!.enableApiContactQuery) || (item.name == ResUtils.getString(R.string.api_battery_query) && !serverConfig!!.enableApiBatteryQuery) || (item.name == ResUtils.getString(R.string.api_wol) && !serverConfig!!.enableApiWol))) {
                 XToastUtils.error(getString(R.string.disabled_on_the_server))
                 return
             }
-            @Suppress("UNCHECKED_CAST")
-            PageOption.to(Class.forName(item.classPath) as Class<XPageFragment>) //跳转的fragment
-                .setNewActivity(true)
-                .open(this)
+            @Suppress("UNCHECKED_CAST") PageOption.to(Class.forName(item.classPath) as Class<XPageFragment>) //跳转的fragment
+                .setNewActivity(true).open(this)
         } catch (e: Exception) {
             e.printStackTrace()
             XToastUtils.error(e.message.toString())
@@ -212,58 +266,109 @@ class ClientFragment : BaseFragment<FragmentClientBinding?>(),
         val msgMap: MutableMap<String, Any> = mutableMapOf()
         val timestamp = System.currentTimeMillis()
         msgMap["timestamp"] = timestamp
-        val clientSignKey = HttpServerUtils.clientSignKey
-        if (!TextUtils.isEmpty(clientSignKey)) {
-            msgMap["sign"] = HttpServerUtils.calcSign(timestamp.toString(), clientSignKey.toString())
+
+        val clientSignKey = HttpServerUtils.clientSignKey.toString()
+        if (HttpServerUtils.clientSafetyMeasures != 0 && TextUtils.isEmpty(clientSignKey)) {
+            if (needToast) XToastUtils.error("请输入签名密钥/RSA公钥/SM4密钥")
+            return
+        }
+
+        if (HttpServerUtils.clientSafetyMeasures == 1 && !TextUtils.isEmpty(clientSignKey)) {
+            msgMap["sign"] = HttpServerUtils.calcSign(timestamp.toString(), clientSignKey)
         }
         val dataMap: MutableMap<String, Any> = mutableMapOf()
         msgMap["data"] = dataMap
 
-        val requestMsg: String = Gson().toJson(msgMap)
+        var requestMsg: String = Gson().toJson(msgMap)
         Log.i(TAG, "requestMsg:$requestMsg")
 
-        if (needToast) mCountDownHelper?.start()
-        XHttp.post(requestUrl)
-            .upJson(requestMsg)
+        val postRequest = XHttp.post(requestUrl)
             .keepJson(true)
             .timeOut((SettingUtils.requestTimeout * 1000).toLong()) //超时时间10s
-            .cacheMode(CacheMode.NO_CACHE)
-            //.retryCount(SettingUtils.requestRetryTimes) //超时重试的次数
-            //.retryDelay(SettingUtils.requestDelayTime) //超时重试的延迟时间
-            //.retryIncreaseDelay(SettingUtils.requestDelayTime) //超时重试叠加延时
-            .timeStamp(true)
-            .execute(object : SimpleCallBack<String>() {
+            .cacheMode(CacheMode.NO_CACHE).timeStamp(true)
 
-                override fun onError(e: ApiException) {
-                    XToastUtils.error(e.displayMessage)
-                    if (needToast) mCountDownHelper?.finish()
+        when (HttpServerUtils.clientSafetyMeasures) {
+            2 -> {
+                try {
+                    val publicKey = RSACrypt.getPublicKey(HttpServerUtils.clientSignKey.toString())
+                    requestMsg = Base64.encode(requestMsg.toByteArray())
+                    requestMsg = RSACrypt.encryptByPublicKey(requestMsg, publicKey)
+                    Log.i(TAG, "requestMsg: $requestMsg")
+                } catch (e: Exception) {
+                    if (needToast) XToastUtils.error(ResUtils.getString(R.string.request_failed) + e.message)
+                    e.printStackTrace()
+                    return
                 }
+                postRequest.upString(requestMsg)
+            }
+            3 -> {
+                try {
+                    val sm4Key = ConvertTools.hexStringToByteArray(HttpServerUtils.clientSignKey.toString())
+                    //requestMsg = Base64.encode(requestMsg.toByteArray())
+                    val encryptCBC = SM4Crypt.encrypt(requestMsg.toByteArray(), sm4Key)
+                    requestMsg = ConvertTools.bytes2HexString(encryptCBC)
+                    Log.i(TAG, "requestMsg: $requestMsg")
+                } catch (e: Exception) {
+                    if (needToast) XToastUtils.error(ResUtils.getString(R.string.request_failed) + e.message)
+                    e.printStackTrace()
+                    return
+                }
+                postRequest.upString(requestMsg)
+            }
+            else -> {
+                postRequest.upJson(requestMsg)
+            }
+        }
 
-                override fun onSuccess(response: String) {
-                    Log.i(TAG, response)
-                    try {
-                        val resp: BaseResponse<ConfigData> = Gson().fromJson(response, object : TypeToken<BaseResponse<ConfigData>>() {}.type)
-                        if (resp.code == 200) {
-                            serverConfig = resp.data!!
-                            if (needToast) XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
-                            //删除3.0.8之前保存的记录
-                            serverHistory.remove(HttpServerUtils.serverAddress.toString())
-                            //添加到历史记录
-                            val key = "【${serverConfig?.extraDeviceMark}】${HttpServerUtils.serverAddress.toString()}"
-                            serverHistory[key] = HttpServerUtils.clientSignKey ?: ""
-                            HttpServerUtils.serverHistory = Gson().toJson(serverHistory)
-                            HttpServerUtils.serverConfig = Gson().toJson(serverConfig)
+        if (needToast) mCountDownHelper?.start()
+        postRequest.execute(object : SimpleCallBack<String>() {
+            override fun onError(e: ApiException) {
+                XToastUtils.error(e.displayMessage)
+                if (needToast) mCountDownHelper?.finish()
+            }
+
+            override fun onSuccess(response: String) {
+                Log.i(TAG, response)
+                try {
+                    var json = response
+                    if (HttpServerUtils.clientSafetyMeasures == 2) {
+                        val publicKey = RSACrypt.getPublicKey(HttpServerUtils.clientSignKey.toString())
+                        json = RSACrypt.decryptByPublicKey(json, publicKey)
+                        json = String(Base64.decode(json))
+                    } else if (HttpServerUtils.clientSafetyMeasures == 3) {
+                        val sm4Key = ConvertTools.hexStringToByteArray(HttpServerUtils.clientSignKey.toString())
+                        val encryptCBC = ConvertTools.hexStringToByteArray(json)
+                        val decryptCBC = SM4Crypt.decrypt(encryptCBC, sm4Key)
+                        json = String(decryptCBC)
+                    }
+                    val resp: BaseResponse<ConfigData> = Gson().fromJson(json, object : TypeToken<BaseResponse<ConfigData>>() {}.type)
+                    if (resp.code == 200) {
+                        serverConfig = resp.data!!
+                        if (needToast) XToastUtils.success(ResUtils.getString(R.string.request_succeeded))
+                        //删除3.0.8之前保存的记录
+                        serverHistory.remove(HttpServerUtils.serverAddress.toString())
+                        //添加到历史记录
+                        val key = "【${serverConfig?.extraDeviceMark}】${HttpServerUtils.serverAddress.toString()}"
+                        if (TextUtils.isEmpty(HttpServerUtils.clientSignKey)) {
+                            serverHistory[key] = "SMSFORWARDER##" + HttpServerUtils.clientSafetyMeasures.toString()
                         } else {
-                            if (needToast) XToastUtils.error(ResUtils.getString(R.string.request_failed) + resp.msg)
+                            serverHistory[key] = HttpServerUtils.clientSignKey + "##" + HttpServerUtils.clientSafetyMeasures.toString()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        if (needToast) XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
+                        HttpServerUtils.serverHistory = Gson().toJson(serverHistory)
+                        HttpServerUtils.serverConfig = Gson().toJson(serverConfig)
+                    } else {
+                        if (needToast) XToastUtils.error(ResUtils.getString(R.string.request_failed) + resp.msg)
                     }
                     if (needToast) mCountDownHelper?.finish()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    if (needToast) {
+                        XToastUtils.error(ResUtils.getString(R.string.request_failed) + response)
+                        mCountDownHelper?.finish()
+                    }
                 }
-
-            })
+            }
+        })
     }
 
     override fun onDestroyView() {

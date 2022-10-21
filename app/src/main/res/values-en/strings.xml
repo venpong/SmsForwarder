@@ -778,6 +778,8 @@
     <string name="server_settings">Server Settings</string>
     <string name="server_settings_tips">It is recommended to enable signature settings, click "Random" to generate and copy to clipboard</string>
     <string name="sign_key">Sign Key</string>
+    <string name="rsa_key_tips">Key pair generated and copied to clipboard</string>
+    <string name="rsa_key_tips2">Copied to clipboard</string>
     <string name="sign_key_tips">Key generated and copied to clipboard</string>
     <string name="copy" tools:ignore="PrivateResource">Copy</string>
     <string name="random">Random</string>
@@ -867,14 +869,14 @@
     <string name="sign_verify_failed">Sign verify failed</string>
     <string name="version_code_required">version_code required</string>
     <string name="inconsistent_version">The app versions of the client and server are inconsistent</string>
-    <string name="timestamp_verify_failed" formatted="false">The timestamp verification failed, and the difference with the server time (%s) cannot exceed 1 hour (diffTime=%s)</string>
+    <string name="timestamp_verify_failed" formatted="false">The timestamp verification failed, and the difference with the server time (%s) cannot exceed %s sec. (diffTime=%s)</string>
 
     <string name="main_title">Main title</string>
     <string name="subtitle">Subtitle</string>
     <string name="sms_keyword_hint">Input keywords to fuzzy match SMS content</string>
     <string name="contact_keyword_hint">Pure numbers match numbers / non-numbers match names</string>
     <string name="call_keyword_hint">Input keyword to fuzzy match mobile phone number</string>
-    <string name="server_settings_tips2">Fill two items according to the config of server, the signature key is optional</string>
+    <string name="server_settings_tips2">Fill these items according to the config of server</string>
     <string name="service_address">Server Url</string>
     <string name="service_address_hint">E.g: http://127.0.0.1:5000</string>
     <string name="features_list">Features List</string>
@@ -921,5 +923,22 @@
     <string name="user_id">User ID</string>
     <string name="auto_clean_logs">Auto delete logs N days ago</string>
     <string name="auto_clean_logs_tips">0=disabled, scan when battery change</string>
-    <string name="day">天</string>
+    <string name="day">Day</string>
+    <string name="safety_measures">Safety Measures</string>
+    <string name="safety_measures_tips">The client and server must be the same. It is strongly recommended to enable encryption when accessing the public network.</string>
+    <string name="safety_measures_none">None</string>
+    <string name="safety_measures_sign">Sign</string>
+    <string name="safety_measures_rsa">RSA Encrypt</string>
+    <string name="safety_measures_sm4">SM4 Encrypt</string>
+    <string name="web_path_tips">See Github Wiki, download to Download directory</string>
+    <string name="time_tolerance">Time Tolerance</string>
+    <string name="time_tolerance_tips">Minimize time tolerance to avoid request replay attacks</string>
+    <string name="private_key">Private Key</string>
+    <string name="private_key_tips">Private key is used on the server: the private key of the server response message is encrypted, and the client public key is decrypted</string>
+    <string name="generate_key">Generate</string>
+    <string name="public_key">Public Key</string>
+    <string name="public_key_tips">Public key is used on the client: client request message public key encryption, server private key decryption</string>
+    <string name="copy_public_key">Copy</string>
+    <string name="sm4_key">SM4 Key</string>
+    <string name="sm4_key_tips">Client or server interaction messages are all encrypted and decrypted using SM4</string>
 </resources>
